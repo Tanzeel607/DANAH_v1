@@ -48,6 +48,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 #   Phase 3 — daily_brief, check_daily_cost
 FUNCTIONS: list[Any] = [
     tasks.worker_ping,
+    tasks.embed_document,
 ]
 
 

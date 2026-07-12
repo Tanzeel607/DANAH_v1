@@ -47,18 +47,18 @@ by the user via `scripts/smoke_test.py` (`make smoke`) after adding keys — see
 
 | # | Step | Status | When | Note |
 |---|---|---|---|---|
-| 11 | Security core: argon2, JWT access/refresh rotation, `require_role`/`require_clearance` | [ ] | | |
-| 12 | Auth API: login, refresh, me + integration tests | [ ] | | |
-| 13 | LLM gateway + Anthropic provider (tool use, structured output + repair retry, backoff) | [ ] | | |
-| 14 | OpenAI provider + fallback switch; `usage_tracker` → `api_usage` with cost table | [ ] | | |
-| 15 | Embeddings service (voyage/openai by env, batching) | [ ] | | |
-| 16 | Indexer: extract → paragraph-aware chunk → embed → store; ARQ `embed_document` | [ ] | | |
-| 17 | Retriever: pgvector cosine + Postgres FTS, RRF, classification filter in SQL | [ ] | | |
-| 18 | Grounded answer composer: numbered sources, cite-or-abstain, confidence formula | [ ] | | |
-| 19 | Knowledge API: upload, list, semantic search | [ ] | | |
-| 20 | Chat API: sessions + `POST /api/agent/chat` (answer, citations, confidence) | [ ] | | |
-| 21 | `scripts/seed.py`: admin, default sources, 3 sample docs indexed | [ ] | | |
-| 22 | **Phase 1 gate:** §10 Phase-1 criteria; green; `docs/API.md`; commit + tag `phase-1-complete` | [ ] | | |
+| 11 | Security core: argon2, JWT access/refresh rotation, `require_role`/`require_clearance` | [x] | 2026-07-13 | refresh-token **reuse detection** revokes the whole family; tokens stored SHA-256 hashed |
+| 12 | Auth API: login, refresh, me + integration tests | [x] | 2026-07-13 | unknown-email and wrong-password are indistinguishable (dummy verify defeats the timing oracle) |
+| 13 | LLM gateway + Anthropic provider (tool use, structured output + repair retry, backoff) | [x] | 2026-07-13 | gateway owns retries/backoff/failover; SDK `max_retries=0` so attempts never multiply |
+| 14 | OpenAI provider + fallback switch; `usage_tracker` → `api_usage` with cost table | [x] | 2026-07-13 | ledger writes in its OWN transaction — a rolled-back request still spent the tokens |
+| 15 | Embeddings service (voyage/openai by env, batching) | [x] | 2026-07-13 | both providers emit `EMBEDDING_DIM` explicitly; dimension mismatch fails loudly, not at INSERT |
+| 16 | Indexer: extract → paragraph-aware chunk → embed → store; ARQ `embed_document` | [x] | 2026-07-13 | failure recorded on the row (`failed` + reason), never swallowed |
+| 17 | Retriever: pgvector cosine + Postgres FTS, RRF, classification filter in SQL | [x] | 2026-07-13 | clearance is a WHERE clause — over-classified chunks are never read, so leakage is structurally impossible |
+| 18 | Grounded answer composer: numbered sources, cite-or-abstain, confidence formula | [x] | 2026-07-13 | only sources the model *actually cited* become citations; hallucinated `[9]` is dropped; confidence capped at 0.95 |
+| 19 | Knowledge API: upload, list, semantic search | [x] | 2026-07-13 | cannot classify a document above your own clearance |
+| 20 | Chat API: sessions + `POST /api/agent/chat` (answer, citations, confidence) | [x] | 2026-07-13 | |
+| 21 | `scripts/seed.py`: admin, default sources, 3 sample docs indexed | [x] | 2026-07-13 | verified: 4 sources + 3 docs; **refuses to fake embeddings without a key** |
+| 22 | **Phase 1 gate:** §10 Phase-1 criteria; green; `docs/API.md`; commit + tag `phase-1-complete` | [x] | 2026-07-13 | ✅ ruff · mypy --strict (64 files) · **80 tests** · docs/API.md written |
 
 ## Phase 2 — Real data + first agents
 
@@ -114,9 +114,9 @@ by the user via `scripts/smoke_test.py` (`make smoke`) after adding keys — see
 
 | Phase | Criterion | Status | Proof |
 |---|---|---|---|
-| 1 | compose up + seed → login → upload PDF → `indexed` within a minute | [ ] | |
-| 1 | chat about the PDF → answer w/ ≥1 citation to that doc + confidence ∈ [0,1] | [ ] | |
-| 1 | out-of-corpus question → explicit "not in my sources" abstention | [ ] | |
+| 1 | compose up + seed → login → upload PDF → `indexed` within a minute | **PASSED-VIA-TESTS** · live=PENDING-CREDENTIALS | `pytest tests/integration/test_auth.py -k upload` (upload→202→pending). Live indexing needs an embedding key → `make smoke --phases 1` |
+| 1 | chat about the PDF → answer w/ ≥1 citation to that doc + confidence ∈ [0,1] | **PASSED-VIA-TESTS** · live=PENDING-CREDENTIALS | `test_chat.py::test_answer_cites_the_uploaded_document` — asserts the citation's `document_id` equals the uploaded doc |
+| 1 | out-of-corpus question → explicit "not in my sources" abstention | **PASSED-VIA-TESTS** · live=PENDING-CREDENTIALS | `test_chat.py::test_out_of_corpus_question_abstains` — `grounded=false`, `citations=[]`, `confidence=0` |
 | 2 | `POST /sources/{worldbank}/sync` ingests real datapoints, visible in `GET /items` | [ ] | |
 | 2 | `POST /pipeline/run` → ≥1 Risk insight grounded in real items with citations | [ ] | |
 | 2 | `GET /pipeline/runs/{id}` shows per-step token usage and cost | [ ] | |

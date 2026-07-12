@@ -14,6 +14,7 @@ Tasks are registered as their services land:
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -47,3 +48,33 @@ async def worker_ping(ctx: dict[str, Any]) -> dict[str, Any]:
     result = {"ok": db_ok, "at": datetime.now(UTC).isoformat(), "job_id": str(ctx.get("job_id"))}
     log.info("worker_ping", **result)
     return result
+
+
+# --- Phase 1 ---------------------------------------------------------------
+async def embed_document(ctx: dict[str, Any], document_id: str) -> dict[str, Any]:
+    """Extract → chunk → embed → index one uploaded document.
+
+    `index_document` records its own failure on the row (status `failed`, reason in `error`), so
+    this task does not re-raise: an ARQ retry would re-run an extraction that is deterministically
+    going to fail again, and the user already has the reason in the API.
+    """
+    bind_request_id(ctx)
+    from app.services.rag.indexer import index_document
+
+    factory = get_session_factory()
+    async with factory() as session:
+        result = await index_document(session, uuid.UUID(document_id))
+        await session.commit()
+
+    log.info(
+        "task_embed_document_done",
+        document_id=document_id,
+        chunks=result.chunk_count,
+        status=result.status.value,
+    )
+    return {
+        "document_id": document_id,
+        "chunks": result.chunk_count,
+        "status": result.status.value,
+        "error": result.error,
+    }

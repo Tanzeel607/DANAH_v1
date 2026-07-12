@@ -31,7 +31,11 @@ dependencies = [
     # --- HTTP / LLM providers ------------------------------------------------
     "httpx>=0.27.0,<0.29.0",
     "anthropic>=0.39.0,<1.0.0",
-    "openai>=1.40.0,<2.0.0",
+    # >=1.108.1: `openai.omit` only became the sentinel for optional *body* params in 1.108.1,
+    # and the `ChatCompletionFunctionToolParam` / `ChatCompletionMessageFunctionToolCall` types
+    # (the function|custom tool-call split) only exist from 1.100.0. app/services/llm/
+    # openai_provider.py imports all three, so an older resolve fails at import time.
+    "openai>=1.108.1,<2.0.0",
 
     # --- Security ------------------------------------------------------------
     "argon2-cffi>=23.1.0,<26.0.0",
