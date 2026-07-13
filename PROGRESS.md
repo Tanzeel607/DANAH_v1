@@ -110,28 +110,34 @@ by the user via `scripts/smoke_test.py` (`make smoke`) after adding keys — see
 
 ---
 
-## ⚠️ Blocker at the final gate
+## ⚠️ Blocker at the final gate — needs one click
 
-The **Docker daemon crashed** during the last full-suite run (the engine began returning
-`500 Internal Server Error` on every API call). The integration suite runs against a real
-PostgreSQL + pgvector and a real Redis — by design (docs/DECISIONS.md #14) — so it cannot complete
-without it.
+The **Docker engine died** during the last full-suite run (it began returning
+`500 Internal Server Error` on every call) and took the Postgres and Redis containers with it.
 
-Restarting Docker Desktop would also have stopped an unrelated `crm_postgres` container belonging
-to another project on this machine, so it was **not** done unilaterally.
+Docker Desktop was relaunched with the user's authorisation, but its backend service
+`com.docker.service` is set to **Manual** start and starting it requires **Administrator rights**,
+which this session does not have. Docker Desktop normally raises a UAC prompt for it.
 
-**To finish (≈3 minutes):**
+The integration suite runs against a real PostgreSQL + pgvector and a real Redis **by design**
+(`docs/DECISIONS.md` #14): SQLite has no vectors, no FTS, no `jsonb` and no append-only trigger, so
+it would test a different schema than the one that ships. It therefore cannot run without Docker.
+
+**To finish (≈3 minutes):** accept the Docker Desktop UAC prompt (or, from an elevated shell,
+`Start-Service com.docker.service`), then:
 
 ```bash
-# restart Docker Desktop, then:
 docker compose up -d postgres redis
 .venv/Scripts/pytest -q          # 168 tests
 ```
 
-That completes the four Phase-4 criteria marked `PENDING-DOCKER` in `BUILD_REPORT.md`
-(audit tamper detection, rate-limit 429s, the classification sweep, and the ≥100-entry chain verify).
+That completes the four criteria marked `PENDING-DOCKER` in `BUILD_REPORT.md`: audit tamper
+detection, the ≥100-entry chain verify, rate-limit 429s, and the classification sweep.
+`BUILD_REPORT.md` §5(a) also has the three `git tag` commands — the phase-2/3/4 tags are
+**deliberately not applied yet**, because their gates have not been observed to pass.
 
-Green without Docker: `ruff` ✅ · `mypy --strict` (101 files) ✅ · unit suite (86 tests) ✅
+**Green without Docker:** `ruff` ✅ · `ruff format` ✅ · `mypy --strict` (101 files) ✅ ·
+unit suite (86 tests) ✅ · `/metrics` counters verified live ✅
 
 ---
 

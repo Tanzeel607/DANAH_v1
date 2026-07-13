@@ -18,13 +18,17 @@ Two things are **not** finished, and both are stated plainly rather than papered
    `scripts/smoke_test.py` (`make smoke`) proves them for real once keys are added. See
    [`FIRST_RUN.md`](FIRST_RUN.md).
 
-2. **Docker's control-plane API crashed during the build** — the daemon began returning
-   `500 Internal Server Error` on every `docker` command, so `docker compose build` and
-   `docker compose ps` no longer work on this machine until Docker Desktop is restarted. The
-   *containers themselves kept running* (ports 5433/6379/8000 stayed reachable), so the test suite
-   still ran against the real Postgres + pgvector and the real Redis. **Restart Docker Desktop
-   before the next `docker compose` command.** It was not restarted here because doing so would also
-   have stopped an unrelated `crm_postgres` container belonging to another project on this machine.
+2. **The Docker engine died during the final gate run and could not be brought back from this
+   session.** It began returning `500 Internal Server Error` on every call, taking the Postgres and
+   Redis containers with it. Docker Desktop was relaunched (with the user's authorisation), but its
+   backend service `com.docker.service` is set to **Manual** start and starting it needs
+   **Administrator rights**, which this session does not have — Docker Desktop normally raises a UAC
+   prompt for this.
+
+   The integration suite runs against a **real** PostgreSQL + pgvector and a **real** Redis by
+   design (`docs/DECISIONS.md` #14 — SQLite has no vectors, no FTS, no `jsonb`, and no append-only
+   trigger, so it would test a different schema than the one that ships). It therefore could not be
+   completed. **§5(a) below is the one command that finishes it.**
 
 ---
 
@@ -117,15 +121,27 @@ All 25 implemented, with response models, in OpenAPI.
 
 ### (a) Complete the integration suite (needs Docker; ~3 minutes)
 
-The Docker daemon crashed mid-run. Restart Docker Desktop, then:
+Docker Desktop is running but its backend service is stopped and needs elevation. **Click through
+the Docker Desktop UAC prompt** (or start the service from an elevated shell:
+`Start-Service com.docker.service`). Wait for `docker version` to report a Server version, then:
 
 ```bash
 docker compose up -d postgres redis
-.venv/Scripts/pytest -q                    # or: make test
+.venv/Scripts/pytest -q                    # or: make test  →  168 tests
 ```
 
-That runs all 168 tests, including every **PENDING-DOCKER** row above (audit tamper detection,
-rate-limit 429s, and the viewer-blocked-from-OFFICIAL_SENSITIVE sweep).
+That runs everything, including every **PENDING-DOCKER** row above: audit tamper detection, the
+≥100-entry chain verify, rate-limit 429s with `Retry-After`, and the
+viewer-blocked-from-OFFICIAL_SENSITIVE sweep.
+
+Then tag the phases (they are deliberately **not** tagged yet, because their gates have not been
+observed to pass):
+
+```bash
+git tag -a phase-2-complete -m "Phase 2 - connectors, Signal + Risk, pipeline, insights"
+git tag -a phase-3-complete -m "Phase 3 - six agents, orchestrator fan-out, approvals, bilingual briefing"
+git tag -a phase-4-complete -m "Phase 4 - audit chain, rate limits, classification sweep, HMAC webhooks"
+```
 
 ### (b) Turn PENDING-CREDENTIALS into PASSED (needs API keys; ~10 minutes)
 
