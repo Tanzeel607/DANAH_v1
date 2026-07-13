@@ -87,3 +87,50 @@ make check            # ruff + mypy --strict + pytest — all must be green
 ⚠️ `CORS_ORIGINS` ships with `null` so the v11 HTML file can be opened from disk during development.
 **Remove it in production** — the config layer refuses to start if `APP_ENV=production` and `null`
 is still present.
+
+---
+
+## Production notes
+
+**Before the first production deploy**
+
+| | Check |
+|---|---|
+| ☐ | `APP_ENV=production`, `APP_DEBUG=false` — the config layer *refuses to boot* otherwise |
+| ☐ | `JWT_SECRET_KEY` ≥ 32 chars, freshly generated (`openssl rand -hex 48`), never the dev value |
+| ☐ | `null` removed from `CORS_ORIGINS`; exact https origins only |
+| ☐ | `ADMIN_INITIAL_PASSWORD` rotated after the first login |
+| ☐ | `POSTGRES_PASSWORD` not `danah` |
+| ☐ | `WEBHOOK_HMAC_DEFAULT_SECRET` set; per-source secrets set for any live feed |
+| ☐ | TLS terminated at the edge; `--proxy-headers` is already on (see `docker-compose.yml`) |
+| ☐ | `data/documents/` backed up **alongside** the database — the DB stores paths, not bytes |
+| ☐ | `/metrics` scraped; alert on `danah_llm_cost_usd_total` and `danah_http_errors_total` |
+| ☐ | `GET /api/audit/verify` scheduled — a broken chain is a security incident, not a bug |
+
+The startup validator enforces the first four for you. It fails loudly and names what is wrong;
+that is the app refusing to run insecurely, not a bug to work around.
+
+**Topology.** 2+ stateless API replicas behind a load balancer → managed/sovereign PostgreSQL with
+pgvector → Redis → 1–2 workers → **exactly one scheduler** (a second one double-fires every cron).
+Object storage (S3-compatible) for original documents; the interface is in
+`app/services/rag/storage.py` and is the only place that changes.
+
+**Cost control.** `PIPELINE_TOKEN_BUDGET` hard-caps a single run — a run that hits it stops and
+reports `partial` rather than billing without limit. `DAILY_COST_ALERT_USD` notifies administrators
+(it does not stop spending). The Signal Agent runs on the *fast* model tier and archives everything
+below `SIGNAL_RELEVANCE_THRESHOLD`, so the expensive agents only ever see items that survived
+triage. `api_usage` is a per-model, per-purpose, per-user ledger; `/metrics` exposes the same
+figures.
+
+**Known limitations** (deliberate, documented, not oversights):
+
+- **S3 storage is not implemented.** `STORAGE_BACKEND=local` works; `s3` raises a clear error
+  naming the seam. Object storage is production-topology work, not a phase deliverable.
+- **OIDC/SSO is a documented stub** (`app/security/oidc.py`). The government IdP's issuer, claims
+  and group names are client-side dependencies that do not exist yet. Half-implementing a flow
+  against an imagined IdP would produce code that looks finished and must be discarded.
+- **The rate limiter fails open.** If Redis is unreachable, requests are allowed and the failure is
+  logged loudly. A rate limiter is a guardrail, not an authentication boundary — a cache outage
+  must not lock a ministry out of its platform mid-incident.
+- **Chunk sizing uses `tiktoken` as a provider-neutral estimator.** Anthropic ships no local
+  tokenizer; chunk size is not a correctness boundary. See `docs/DECISIONS.md` #13.

@@ -1,15 +1,10 @@
 """Background tasks.
 
-Each task owns its own DB session (a worker has no FastAPI request scope) and re-establishes
-the request id, so a job's logs correlate with the API call that enqueued it.
+Each task owns its own DB session (a worker has no FastAPI request scope) and re-establishes the
+request id, so a job's logs correlate with the API call that enqueued it.
 
-Tasks are thin: resolve arguments, call the service that does the real work, record the
-outcome. The business logic lives in `app/services/`.
-
-Tasks are registered as their services land:
-  Phase 1 — `embed_document`
-  Phase 2 — `sync_source`, `sync_all_due_sources`, `run_pipeline`
-  Phase 3 — `daily_brief`, `check_daily_cost`
+Tasks are thin: resolve arguments, call the service that does the real work, record the outcome.
+The business logic lives in `app/services/`.
 """
 
 from __future__ import annotations
@@ -22,6 +17,7 @@ import structlog
 from sqlalchemy import text
 
 from app.db import get_session_factory
+from app.enums import PipelineTrigger
 from app.logging import new_request_id, set_request_id
 
 log = structlog.get_logger(__name__)
@@ -77,4 +73,134 @@ async def embed_document(ctx: dict[str, Any], document_id: str) -> dict[str, Any
         "chunks": result.chunk_count,
         "status": result.status.value,
         "error": result.error,
+    }
+
+
+# --- Phase 2 ---------------------------------------------------------------
+async def sync_source(ctx: dict[str, Any], source_id: str) -> dict[str, Any]:
+    """Fetch one source and persist its new items (deduplicated)."""
+    bind_request_id(ctx)
+    from app.services.ingestion.runner import sync_source_by_id
+
+    factory = get_session_factory()
+    async with factory() as session:
+        result = await sync_source_by_id(session, uuid.UUID(source_id))
+        await session.commit()
+
+    log.info(
+        "task_sync_source_done",
+        source_id=source_id,
+        fetched=result.fetched,
+        created=result.created,
+        duplicates=result.duplicates,
+        status=result.status,
+    )
+    return result.model_dump(mode="json")
+
+
+async def sync_all_due_sources(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Cron tick: enqueue a sync for every enabled source whose poll interval has elapsed.
+
+    The tick enqueues rather than executes, so one slow source cannot delay the others and a long
+    sync cannot overrun the next tick.
+    """
+    bind_request_id(ctx)
+    from app.services.ingestion.runner import due_source_ids
+
+    factory = get_session_factory()
+    async with factory() as session:
+        due = await due_source_ids(session)
+
+    redis = ctx.get("redis")
+    enqueued = 0
+    for source_id in due:
+        if redis is not None:
+            await redis.enqueue_job("sync_source", str(source_id))
+            enqueued += 1
+
+    log.info("task_sync_all_due_sources", due=len(due), enqueued=enqueued)
+    return {"due": len(due), "enqueued": enqueued}
+
+
+async def run_pipeline(
+    ctx: dict[str, Any],
+    run_id: str,
+    trigger: str = PipelineTrigger.MANUAL.value,
+    max_items: int | None = None,
+    agents: list[str] | None = None,
+) -> dict[str, Any]:
+    """Execute a full agent pipeline run against a pre-created `pipeline_runs` row.
+
+    The row is created synchronously by `POST /api/pipeline/run` so the caller gets a `run_id` to
+    poll immediately; this task fills it in.
+    """
+    bind_request_id(ctx)
+    from app.services.orchestrator import execute_run
+
+    factory = get_session_factory()
+    async with factory() as session:
+        summary = await execute_run(
+            session,
+            run_id=uuid.UUID(run_id),
+            max_items=max_items,
+            agents=agents,
+        )
+        await session.commit()
+
+    log.info("task_run_pipeline_done", run_id=run_id, status=summary.get("status"))
+    return summary
+
+
+# --- Phase 3 ---------------------------------------------------------------
+async def daily_brief(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Cron: the scheduled daily pipeline run, ending in a bilingual executive briefing.
+
+    Idempotent per day (§7.4): if a scheduled run already happened today, this is a no-op rather
+    than a second run and a duplicate briefing.
+    """
+    bind_request_id(ctx)
+    from app.services.orchestrator import start_run, was_scheduled_run_completed_today
+
+    factory = get_session_factory()
+    async with factory() as session:
+        if await was_scheduled_run_completed_today(session):
+            log.info("task_daily_brief_skipped", reason="already_ran_today")
+            return {"skipped": True, "reason": "already_ran_today"}
+
+        run = await start_run(session, trigger=PipelineTrigger.SCHEDULED, initiated_by=None)
+        run_id = run.id
+        await session.commit()
+
+    redis = ctx.get("redis")
+    if redis is not None:
+        await redis.enqueue_job("run_pipeline", str(run_id), PipelineTrigger.SCHEDULED.value)
+
+    log.info("task_daily_brief_enqueued", run_id=str(run_id))
+    return {"skipped": False, "run_id": str(run_id)}
+
+
+async def check_daily_cost(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Cron: notify administrators when today's LLM spend exceeds DAILY_COST_ALERT_USD."""
+    bind_request_id(ctx)
+    from app.config import get_settings
+    from app.services.llm.usage_tracker import today_cost_usd
+    from app.services.notification_service import notify_cost_alert
+
+    settings = ctx.get("settings") or get_settings()
+    threshold = float(settings.daily_cost_alert_usd)
+
+    factory = get_session_factory()
+    async with factory() as session:
+        spent = float(await today_cost_usd(session))
+        exceeded = spent > threshold
+        if exceeded:
+            await notify_cost_alert(session, spent_usd=spent, threshold_usd=threshold)
+            await session.commit()
+
+    log.info("task_check_daily_cost", spent_usd=spent, threshold_usd=threshold, exceeded=exceeded)
+    return {
+        "spent_usd": spent,
+        "threshold_usd": threshold,
+        "exceeded": exceeded,
+        "date": datetime.now(UTC).date().isoformat(),
     }

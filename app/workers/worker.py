@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.config import get_settings
@@ -42,13 +43,14 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     log.info("worker_shutdown")
 
 
-# Every task the queue can run. Each phase registers its own as the backing service lands:
-#   Phase 1 — embed_document
-#   Phase 2 — sync_source, sync_all_due_sources, run_pipeline
-#   Phase 3 — daily_brief, check_daily_cost
 FUNCTIONS: list[Any] = [
     tasks.worker_ping,
     tasks.embed_document,
+    tasks.sync_source,
+    tasks.sync_all_due_sources,
+    tasks.run_pipeline,
+    tasks.daily_brief,
+    tasks.check_daily_cost,
 ]
 
 
@@ -74,12 +76,24 @@ class WorkerSettings:
 def _cron_jobs() -> list[Any]:
     """Cron schedule, derived from config.
 
-    Populated in Phase 2 (source polling) and Phase 3 (daily briefing, cost guardrail), once
-    the tasks they fire exist. `PIPELINE_SCHEDULE_CRON` drives the daily run; ARQ's `cron()`
-    takes explicit fields rather than a crontab string, so the expression is parsed by
-    `_parse_cron_hh_mm`.
+    `PIPELINE_SCHEDULE_CRON` (default `0 5 * * *`) drives the daily run. ARQ's `cron()` takes
+    explicit fields rather than a crontab string, so the expression is parsed here.
+
+    Every cron job *enqueues* rather than executes. A twelve-minute pipeline run must not block
+    the source-polling tick behind it.
     """
-    return []
+    settings = get_settings()
+    minute, hour = _parse_cron_hh_mm(settings.pipeline_schedule_cron)
+
+    return [
+        # Check every 5 minutes for sources that are due. The task itself honours each source's
+        # `poll_interval_minutes`, so this tick is cheap and idempotent.
+        cron(tasks.sync_all_due_sources, minute=set(range(0, 60, 5)), run_at_startup=False),
+        # The daily agent pipeline, ending in the bilingual executive briefing.
+        cron(tasks.daily_brief, hour={hour}, minute={minute}, run_at_startup=False),
+        # Cost guardrail: notify administrators if DAILY_COST_ALERT_USD was exceeded today.
+        cron(tasks.check_daily_cost, hour={23}, minute={55}, run_at_startup=False),
+    ]
 
 
 def _parse_cron_hh_mm(expression: str) -> tuple[int, int]:

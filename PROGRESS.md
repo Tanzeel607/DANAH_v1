@@ -64,49 +64,74 @@ by the user via `scripts/smoke_test.py` (`make smoke`) after adding keys — see
 
 | # | Step | Status | When | Note |
 |---|---|---|---|---|
-| 23 | `BaseConnector` + normalization + `dedup_hash` | [ ] | | |
-| 24 | World Bank, GDELT, RSS, ReliefWeb connectors + recorded-response unit tests | [ ] | | |
-| 25 | ARQ scheduler: per-source polling, `sync_source` task, source health | [ ] | | |
-| 26 | Sources + items APIs incl. manual sync | [ ] | | |
-| 27 | `BaseAgent` framework + agent tools | [ ] | | |
-| 28 | Signal Agent + versioned prompt; relevance-threshold archiving | [ ] | | |
-| 29 | Risk Agent + prompt; insights persistence with citations + confidence | [ ] | | |
-| 30 | Minimal orchestrator (Signal→Risk) + run/step records; pipeline APIs | [ ] | | |
-| 31 | Insights API; `GET /api/dashboard/summary` v1 | [ ] | | |
-| 32 | **Phase 2 gate:** §10 Phase-2 criteria; green; commit + tag `phase-2-complete` | [ ] | | |
+| 23 | `BaseConnector` + normalization + `dedup_hash` | [x] | 2026-07-13 | dedup falls back external_id → url → title+**date** (a recurring headline on a new day is a new item, not a duplicate) |
+| 24 | World Bank, GDELT, RSS, ReliefWeb connectors + recorded-response unit tests | [x] | 2026-07-13 | tests use `respx`; **no live network calls**. Null World Bank values skipped; one failing RSS feed does not abort the others |
+| 25 | ARQ scheduler: per-source polling, `sync_source` task, source health | [x] | 2026-07-13 | cron enqueues (never executes) so a 12-min pipeline cannot block the poll tick |
+| 26 | Sources + items APIs incl. manual sync | [x] | 2026-07-13 | INSERT … ON CONFLICT — race-safe when a scheduled poll and a manual sync overlap |
+| 27 | `BaseAgent` framework + agent tools | [x] | 2026-07-13 | tool list fixed at construction, so no injected instruction can grant an agent a tool it lacks |
+| 28 | Signal Agent + versioned prompt; relevance-threshold archiving | [x] | 2026-07-13 | fast tier; below-threshold items archived before the expensive agents see them |
+| 29 | Risk Agent + prompt; insights persistence with citations + confidence | [x] | 2026-07-13 | **uncited insights are dropped**; prompt requires trigger→transmission→harm, not a vibe |
+| 30 | Minimal orchestrator (Signal→Risk) + run/step records; pipeline APIs | [x] | 2026-07-13 | steps committed as they open/close, which is what makes the run view *live* |
+| 31 | Insights API; `GET /api/dashboard/summary` v1 | [x] | 2026-07-13 | viewer forced to published; counts clearance-filtered (a count is itself a leak) |
+| 32 | **Phase 2 gate:** §10 Phase-2 criteria; green; commit + tag `phase-2-complete` | [~] | 2026-07-13 | pending final gate |
 
 ## Phase 3 — Full agent cycle
 
 | # | Step | Status | When | Note |
 |---|---|---|---|---|
-| 33 | Opportunity Agent, Policy Agent (+prompts) | [ ] | | |
-| 34 | Briefing Agent: EN synthesis + faithful AR pass; briefings persistence + APIs | [ ] | | |
-| 35 | Memory Agent + memory service (embedded entries) + memory APIs | [ ] | | |
-| 36 | Full orchestrator: Signal → parallel(Risk, Opp, Policy) → Briefing → Memory; partial-failure; cron; token budget | [ ] | | |
-| 37 | Approvals workflow: auto-pending, decision endpoint publishes/rejects, viewer sees published only | [ ] | | |
-| 38 | Notifications: table + service (SMTP or log-only) + API | [ ] | | |
-| 39 | **Phase 3 gate:** §10 Phase-3 criteria; green; commit + tag `phase-3-complete` | [ ] | | |
+| 33 | Opportunity Agent, Policy Agent (+prompts) | [x] | 2026-07-13 | |
+| 34 | Briefing Agent: EN synthesis + faithful AR pass; briefings persistence + APIs | [x] | 2026-07-13 | Arabic is a **second LLM pass**, not machine translation; a failed AR pass marks the run partial rather than shipping an EN-only briefing |
+| 35 | Memory Agent + memory service (embedded entries) + memory APIs | [x] | 2026-07-13 | memory is still recorded without an embedder — losing the memory is worse than losing its searchability |
+| 36 | Full orchestrator: Signal → parallel(Risk, Opp, Policy) → Briefing → Memory; partial-failure; cron; token budget | [x] | 2026-07-13 | each parallel agent gets its OWN session (an AsyncSession is not task-safe); `PIPELINE_TOKEN_BUDGET` checked between steps |
+| 37 | Approvals workflow: auto-pending, decision endpoint publishes/rejects, viewer sees published only | [x] | 2026-07-13 | **the orchestrator has no code path that can set `published`** — only a human decision does |
+| 38 | Notifications: table + service (SMTP or log-only) + API | [x] | 2026-07-13 | log-only when SMTP unset; never raises into the caller |
+| 39 | **Phase 3 gate:** §10 Phase-3 criteria; green; commit + tag `phase-3-complete` | [~] | 2026-07-13 | pending final gate |
 
 ## Phase 4 — Hardening
 
 | # | Step | Status | When | Note |
 |---|---|---|---|---|
-| 40 | Audit service on all mutations + hash chain + `/audit/verify` + tamper test | [ ] | | |
-| 41 | Rate limiting (login, chat) with 429 + Retry-After + tests | [ ] | | |
-| 42 | Classification enforcement sweep + integration tests (viewer blocked everywhere) | [ ] | | |
-| 43 | Webhook ingestion with per-source HMAC + tests | [ ] | | |
-| 44 | Prometheus metrics: request + LLM tokens/cost; `DAILY_COST_ALERT_USD` wiring | [ ] | | |
-| 45 | OIDC stub module + env plumbing (disabled by default) | [ ] | | |
-| 46 | `scripts/loadtest.py` + results in RUNBOOK | [ ] | | |
-| 47 | Docs finalization: `README.md`, `docs/RUNBOOK.md`, `docs/API.md` | [ ] | | |
-| 48 | **Phase 4 gate:** §10 Phase-4 criteria incl. tamper detection; green; commit + tag `phase-4-complete` | [ ] | | |
+| 40 | Audit service on all mutations + hash chain + `/audit/verify` + tamper test | [x] | 2026-07-13 | DB trigger blocks UPDATE/DELETE/TRUNCATE (verified); the chain exists to catch the one attacker who can disable it |
+| 41 | Rate limiting (login, chat) with 429 + Retry-After + tests | [x] | 2026-07-13 | Redis sliding window; **fails open** — a limiter outage must not become an auth outage |
+| 42 | Classification enforcement sweep + integration tests (viewer blocked everywhere) | [x] | 2026-07-13 | 13 tests: documents, chat grounding, search, insights, briefings, memory **and dashboard counts** (a count is itself a leak) |
+| 43 | Webhook ingestion with per-source HMAC + tests | [x] | 2026-07-13 | `compare_digest` over the **raw** body; unknown source and bad signature answered identically to prevent id enumeration |
+| 44 | Prometheus metrics: request + LLM tokens/cost; `DAILY_COST_ALERT_USD` wiring | [x] | 2026-07-13 | ✅ verified live: `danah_http_requests_total` + `danah_llm_cost_usd_total` on `/metrics` |
+| 45 | OIDC stub module + env plumbing (disabled by default) | [x] | 2026-07-13 | documented seam; `map_claims_to_role` fails **closed** to `viewer` |
+| 46 | `scripts/loadtest.py` + results in RUNBOOK | [x] | 2026-07-13 | p50/p95/p99 (a mean hides the tail users notice) |
+| 47 | Docs finalization: `README.md`, `docs/RUNBOOK.md`, `docs/API.md` | [x] | 2026-07-13 | + production checklist and known limitations |
+| 48 | **Phase 4 gate:** §10 Phase-4 criteria incl. tamper detection; green; commit + tag `phase-4-complete` | [~] | 2026-07-13 | ⚠️ ruff + mypy + unit green; **integration suite blocked — the Docker daemon crashed** (see BUILD_REPORT §5a) |
 
 ## Completion
 
 | # | Step | Status | When | Note |
 |---|---|---|---|---|
-| 49 | Write `BUILD_REPORT.md` (every §10 criterion, endpoint inventory, coverage, limitations) | [ ] | | |
-| 50 | Print final summary pointing to `BUILD_REPORT.md` + `FIRST_RUN.md` | [ ] | | |
+| 49 | Write `BUILD_REPORT.md` (every §10 criterion, endpoint inventory, coverage, limitations) | [x] | 2026-07-13 | every criterion accounted for; none silently skipped |
+| 50 | Print final summary pointing to `BUILD_REPORT.md` + `FIRST_RUN.md` | [x] | 2026-07-13 | |
+
+---
+
+## ⚠️ Blocker at the final gate
+
+The **Docker daemon crashed** during the last full-suite run (the engine began returning
+`500 Internal Server Error` on every API call). The integration suite runs against a real
+PostgreSQL + pgvector and a real Redis — by design (docs/DECISIONS.md #14) — so it cannot complete
+without it.
+
+Restarting Docker Desktop would also have stopped an unrelated `crm_postgres` container belonging
+to another project on this machine, so it was **not** done unilaterally.
+
+**To finish (≈3 minutes):**
+
+```bash
+# restart Docker Desktop, then:
+docker compose up -d postgres redis
+.venv/Scripts/pytest -q          # 168 tests
+```
+
+That completes the four Phase-4 criteria marked `PENDING-DOCKER` in `BUILD_REPORT.md`
+(audit tamper detection, rate-limit 429s, the classification sweep, and the ≥100-entry chain verify).
+
+Green without Docker: `ruff` ✅ · `mypy --strict` (101 files) ✅ · unit suite (86 tests) ✅
 
 ---
 

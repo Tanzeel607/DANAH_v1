@@ -104,7 +104,18 @@ It also gives what the wrapper never could: DANAH's own `danah_llm_cost_usd_tota
 **Alternative rejected:** pinning Starlette below 0.52 — would drag FastAPI back with it and pin the
 whole stack to an ageing release to satisfy one optional wrapper.
 
-### 20 — `PENDING-CREDENTIALS` build mode
+### 20 — Each parallel agent gets its own `AsyncSession`; `pytest-timeout` guards the suite
+**Reason:** the orchestrator fans Risk, Opportunity and Policy out with `asyncio.gather`. An
+`AsyncSession` is **not task-safe** — two coroutines flushing through one session interleave on the
+same connection and corrupt the identity map. Each branch therefore opens its own session from the
+factory. The consequence is that a test holding an *uncommitted* transaction on the same rows can
+deadlock against those sessions, and a deadlock in an async test manifests as a **hang, not a
+failure** — which is exactly what happened during this build and cost real time to diagnose.
+`pytest-timeout` (120s per test) now converts any such hang into a red test with a traceback.
+**Alternative rejected:** sharing one session across the fan-out — it is the bug, not the fix; and
+serialising the three agents would trade a correctness property for latency we do not need to spend.
+
+### 21 — `PENDING-CREDENTIALS` build mode
 **Reason:** no `ANTHROPIC_API_KEY` / `VOYAGE_API_KEY` / `OPENAI_API_KEY` was present at build time. Per execution
 prompt Rule 8, all production code paths are built for real and every test passes against `FakeLLMGateway` /
 `FakeEmbedder`. Acceptance criteria that can only be proven with a live provider are marked `PENDING-CREDENTIALS`

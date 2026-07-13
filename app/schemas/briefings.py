@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date as date_type
+from datetime import datetime
 
 from pydantic import Field
 
@@ -23,7 +24,12 @@ class BriefingSection(DanahModel):
 
 class BriefingOut(DanahModel):
     id: uuid.UUID
-    date: date
+    # `date` is both the field name (the wire contract) and the field type. Inside a class body
+    # the name binds to the field, so annotating it as plain `date` makes Pydantic resolve the
+    # *field* — on `BriefingGenerateRequest` below, whose `date` holds a `Field(...)` default,
+    # that evaluates `FieldInfo | None` and the module cannot even be imported. The type is
+    # therefore always referred to by an alias in this file.
+    date: date_type
     title: str
     confidence: float = Field(ge=0.0, le=1.0)
     classification: Classification
@@ -42,7 +48,7 @@ class BriefingDetail(BriefingOut):
 
 
 class BriefingGenerateRequest(DanahModel):
-    date: date | None = Field(default=None, description="Defaults to today (server TZ)")
+    date: date_type | None = Field(default=None, description="Defaults to today (server TZ)")
     force: bool = Field(
         default=False,
         description="Regenerate even if a briefing already exists for that date",

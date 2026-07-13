@@ -21,6 +21,7 @@ from app.config import Settings, get_settings
 from app.db import dispose_engine
 from app.exceptions import register_exception_handlers
 from app.logging import RequestContextMiddleware, configure_logging
+from app.security.rate_limit import RateLimitMiddleware
 
 log = structlog.get_logger(__name__)
 
@@ -96,7 +97,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # --- Middleware (added last = outermost) --------------------------------
+    # --- Middleware -----------------------------------------------------------
+    # Starlette applies middleware in reverse registration order, so the LAST one added is the
+    # OUTERMOST. The intended order, outermost first:
+    #   RequestContext  -> assigns the request id everything else logs and audits against
+    #   CORS            -> must see every inner response, including error responses
+    #   RateLimit       -> rejects before any handler or database work happens
+    app.add_middleware(RateLimitMiddleware, settings=cfg)
     app.add_middleware(
         CORSMiddleware,
         # `null` is present for local file:// testing of the v11 HTML prototype.

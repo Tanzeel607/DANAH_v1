@@ -114,6 +114,49 @@ class FakeLLMGateway:
         return None
 
     # -- gateway interface -------------------------------------------------
+    async def complete_structured(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        schema: Any,
+        system: str = "",
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        purpose: str = "agent",
+        user_id: Any = None,
+    ) -> tuple[Any, Any]:
+        """Mirror `DefaultLLMGateway.complete_structured`: validated instance + raw result.
+
+        The agents call this, not `complete()`, so the fake must honour the same contract — parse
+        the reply into the Pydantic schema and let a malformed reply raise, exactly as production
+        does after its repair attempt fails.
+        """
+        from pydantic import ValidationError
+
+        from app.exceptions import LLMGatewayError
+
+        result = await self.complete(
+            messages,
+            system=system,
+            model=model,
+            max_tokens=max_tokens if max_tokens is not None else 2048,
+            temperature=temperature if temperature is not None else 0.2,
+            json_schema=schema.model_json_schema(),
+            purpose=purpose,
+            user_id=user_id,
+        )
+
+        try:
+            parsed = schema.model_validate_json(result.text)
+        except (ValidationError, ValueError) as exc:
+            raise LLMGatewayError(
+                "The model did not return output matching the required schema.",
+                detail={"schema": schema.__name__, "error": str(exc)[:300]},
+            ) from exc
+
+        return parsed, result
+
     async def complete(
         self,
         messages: list[dict[str, Any]],
