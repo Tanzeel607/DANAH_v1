@@ -36,6 +36,17 @@ PATCHES: list[tuple[str, str, str]] = [
 
 
 def main() -> int:
+    if not SRC.exists():
+        # The prototype was removed from the repository. `web/index.html` is the built artefact
+        # and is committed, so the product still runs — this step is only needed to re-wire the
+        # UI after editing the prototype. Say so plainly rather than dying on a FileNotFoundError.
+        print(f"  !! {SRC.name} is not in this repository.")
+        print("     web/index.html is already built and committed, so the app runs without it.")
+        print("     Restore the prototype only if you need to re-wire the UI from source:")
+        print("         git show 745446d~1:DANAH_Strategic_Intelligence_Platform_v11.html \\")
+        print("             > DANAH_Strategic_Intelligence_Platform_v11.html")
+        return 1
+
     html = SRC.read_text(encoding="utf-8", errors="replace")
 
     for pattern, repl, why in PATCHES:
