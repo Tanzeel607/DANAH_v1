@@ -837,6 +837,302 @@
     } catch (e) {
       console.warn('[DANAH] hydrate failed', e);
     }
+
+    // Notifications (the Alerts page) and the knowledge base run on their own fetches so a
+    // slow document list never holds up the dashboard. Both are fire-and-forget.
+    refreshAlerts();
+    refreshDocuments();
+  }
+
+  function relativeTime(iso) {
+    if (!iso) return '';
+    const then = Date.parse(iso);
+    if (isNaN(then)) return '';
+    // Date.now() is fine in the browser; only the workflow sandbox forbids it.
+    const s = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (s < 60) return 'just now';
+    const m = Math.round(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.round(h / 24)}d ago`;
+  }
+
+  /* =====================================================================
+     5. ALERTS — the real notification feed, not the prototype's five demo rows
+     =====================================================================
+     The prototype's Alerts page and the sidebar's unread badge both read a hard-coded
+     ALERTS array. The backend already produces real notifications — approval-pending,
+     briefing-published, cost-alert, source-failure — addressed to a role or a person,
+     and returned only to the recipient. So Alerts now shows exactly what the logged-in
+     user is actually notified about, and "mark read" writes through to the server.
+
+     Note for the demo: approval notifications are addressed to role=executive, so the
+     admin's Alerts page may be near-empty while the executive's is full. That is correct,
+     not a bug — admin is not the approver. Sign in as executive@ministry.gov to see them. */
+  const NOTIF_MAP = {
+    approval_pending: { type: 'policy', priority: 'high' },
+    briefing_published: { type: 'success', priority: 'medium' },
+    cost_alert: { type: 'risk', priority: 'critical' },
+    source_failure: { type: 'risk', priority: 'high' },
+  };
+
+  async function refreshAlerts() {
+    if (!state.live || typeof ALERTS === 'undefined') return;
+    let rows;
+    try {
+      rows = await call('/notifications?limit=50');
+    } catch (_) {
+      return; // leave whatever is there; never blank the page on a transient error
+    }
+    const list = Array.isArray(rows) ? rows : (rows?.items || []);
+    ALERTS.length = 0;
+    list.forEach((n) => {
+      const m = NOTIF_MAP[n.kind] || { type: 'policy', priority: 'medium' };
+      ALERTS.push({
+        id: n.id,
+        type: m.type,
+        priority: m.priority,
+        ministry: '',
+        title: n.title,
+        action: n.body,
+        ago: relativeTime(n.created_at),
+        read: !!n.read_at,
+      });
+    });
+    if (typeof renderSidebar === 'function') renderSidebar(); // updates the unread badge
+    if (S && S.route === 'alerts' && typeof render === 'function') render();
+  }
+
+  // Read-through to the server. Optimistic locally so the UI is instant; the server call is
+  // the source of truth and cannot mark another user's notification (the ownership check is
+  // part of the UPDATE, not a lookup before it).
+  window.readAlert = async function readAlert(id) {
+    const a = (typeof ALERTS !== 'undefined' ? ALERTS : []).find((x) => x.id === id);
+    if (a) a.read = true;
+    if (typeof renderSidebar === 'function') renderSidebar();
+    if (typeof render === 'function') render();
+    if (state.live) { try { await call('/notifications/read', { method: 'POST', body: { ids: [id] } }); } catch (_) {} }
+  };
+  window.markAllRead = async function markAllRead() {
+    (typeof ALERTS !== 'undefined' ? ALERTS : []).forEach((a) => (a.read = true));
+    if (typeof toast === 'function') toast('All notifications marked read');
+    if (typeof renderSidebar === 'function') renderSidebar();
+    if (typeof render === 'function') render();
+    if (state.live) { try { await call('/notifications/read', { method: 'POST', body: { ids: [] } }); } catch (_) {} }
+  };
+
+  /* =====================================================================
+     6. KNOWLEDGE BASE — a real document-upload control and a real indexed list
+     =====================================================================
+     The prototype's "Verified Knowledge Monitor" is entirely synthetic, and there was no
+     way to add knowledge through the UI at all — documents could only arrive via the seed
+     or the API. Yet the whole point of grounded chat is that answers come from the
+     ministry's own documents. This replaces that page, when live, with a working knowledge
+     base: upload a file, watch it index, and see it become citable.
+
+     Upload is classification-gated on the server (a user cannot classify above their own
+     clearance). The dropdown is capped to match, so the control never offers what the server
+     will reject. */
+  const CLASS_ORDER = ['PUBLIC', 'INTERNAL', 'OFFICIAL', 'OFFICIAL_SENSITIVE'];
+  const docsState = { items: [], counts: {}, uploading: false, msg: '' };
+
+  function allowedClassifications() {
+    const ceiling = (state.user && state.user.clearance) || 'OFFICIAL';
+    const cap = CLASS_ORDER.indexOf(ceiling);
+    return CLASS_ORDER.slice(0, cap < 0 ? CLASS_ORDER.length : cap + 1);
+  }
+
+  async function refreshDocuments() {
+    if (!state.live) return;
+    try {
+      const [docs, counts] = await Promise.all([
+        call('/knowledge/documents?limit=100').catch(() => null),
+        call('/knowledge/documents/count').catch(() => null),
+      ]);
+      docsState.items = Array.isArray(docs) ? docs : (docs?.items || []);
+      docsState.counts = counts || {};
+    } catch (_) { /* keep the last good list */ }
+    if (S && S.route === 'knowledge' && typeof render === 'function') render();
+  }
+
+  window.danahRefreshDocs = refreshDocuments;
+
+  window.danahUpload = async function danahUpload() {
+    const fileEl = document.getElementById('kbFile');
+    const titleEl = document.getElementById('kbTitle');
+    const classEl = document.getElementById('kbClass');
+    const btn = document.getElementById('kbUploadBtn');
+    if (!fileEl || !fileEl.files || !fileEl.files.length) {
+      docsState.msg = 'Choose a file first.';
+      if (typeof render === 'function') render();
+      return;
+    }
+    const file = fileEl.files[0];
+    const fd = new FormData();
+    fd.append('file', file);
+    if (titleEl && titleEl.value.trim()) fd.append('title', titleEl.value.trim());
+    fd.append('classification', (classEl && classEl.value) || 'OFFICIAL');
+
+    docsState.uploading = true;
+    docsState.msg = `Uploading “${file.name}”…`;
+    if (btn) { btn.disabled = true; }
+    if (typeof render === 'function') render();
+
+    try {
+      const resp = await fetch(`${API}/api/knowledge/documents`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tok.access}` }, // no Content-Type — browser sets the multipart boundary
+        body: fd,
+      });
+      if (!resp.ok) {
+        // Surface the server's own reason. A 403 here can be the role gate (viewers cannot
+        // upload at all) or the classification gate (analyst picking above their ceiling) —
+        // the message from the server tells the truth about which; do not guess.
+        let detail = `HTTP ${resp.status}`;
+        let code = '';
+        try { const e = await resp.json(); detail = e?.error?.message || e?.detail || detail; code = e?.error?.code || ''; } catch (_) {}
+        docsState.msg = code === 'permission_denied'
+          ? 'Your role does not permit uploading documents (analyst clearance or above is required).'
+          : `Upload failed: ${detail}`;
+        docsState.uploading = false;
+        if (typeof render === 'function') render();
+        return;
+      }
+      const doc = await resp.json();
+      docsState.uploading = false;
+      docsState.msg = `“${doc.title}” uploaded — indexing now (real embeddings)…`;
+      if (fileEl) fileEl.value = '';
+      if (titleEl) titleEl.value = '';
+      await refreshDocuments();
+      pollDocuments(doc.id, 12);
+    } catch (e) {
+      docsState.uploading = false;
+      docsState.msg = `Upload failed: ${e.message}. Is the backend running?`;
+      if (typeof render === 'function') render();
+    }
+  };
+
+  // Poll until the just-uploaded document reaches a terminal state, so the operator sees
+  // pending → indexed happen. Needs the worker running; if it never indexes, the row simply
+  // stays "pending" and the note explains why.
+  function pollDocuments(id, tries) {
+    if (tries <= 0) return;
+    setTimeout(async () => {
+      await refreshDocuments();
+      const d = docsState.items.find((x) => x.id === id);
+      if (d && (d.status === 'indexed' || d.status === 'failed')) {
+        docsState.msg = d.status === 'indexed'
+          ? `“${d.title}” is indexed (${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'}) — you can now ask the Live Agent about it.`
+          : `“${d.title}” failed to index: ${d.error || 'unknown error'}.`;
+        if (typeof render === 'function') render();
+        return;
+      }
+      pollDocuments(id, tries - 1);
+    }, 3000);
+  }
+
+  function docStatusPill(s, chunks) {
+    const map = {
+      pending: ['orange', 'Pending'],
+      processing: ['blue', 'Indexing…'],
+      indexed: ['green', `Indexed · ${chunks} chunk${chunks === 1 ? '' : 's'}`],
+      failed: ['red', 'Failed'],
+    };
+    const x = map[s] || ['navy', s];
+    return `<span class="pill bg-${x[0]} tone-${x[0]}"><span class="sdot" style="background:var(--${x[0]})"></span>${x[1]}</span>`;
+  }
+
+  function realKnowledgePage() {
+    const opts = allowedClassifications()
+      .map((c) => `<option value="${c}" ${c === 'OFFICIAL' || (c === 'INTERNAL' && !allowedClassifications().includes('OFFICIAL')) ? 'selected' : ''}>${c.replace('_', '-')}</option>`)
+      .join('');
+    const c = docsState.counts || {};
+    const total = docsState.items.length;
+    const indexed = c.indexed || 0;
+
+    const rows = docsState.items.length
+      ? docsState.items.map((d) => `
+          <tr style="cursor:default">
+            <td><div style="font-weight:600;font-size:13px">${esc(d.title)}</div>
+              <div class="muted" style="font-size:11px">${esc(d.filename || '')}</div></td>
+            <td><span class="cls-tag">${esc((d.classification || '').replace('_', '-'))}</span></td>
+            <td>${docStatusPill(d.status, d.chunk_count)}</td>
+            <td style="font-size:12px;color:var(--ink-2)">${esc(String(d.language || '').toUpperCase())}</td>
+            <td style="font-size:12px;color:var(--ink-3)">${esc(relativeTime(d.created_at))}</td>
+          </tr>`).join('')
+      : `<tr><td colspan="5" class="muted" style="text-align:center;padding:26px">No documents yet. Upload one above — it becomes searchable and citable once indexed.</td></tr>`;
+
+    const msg = docsState.msg
+      ? `<div class="callout ${/fail|cannot|requires/i.test(docsState.msg) ? '' : 'amber'}" style="margin-top:12px">${docsState.uploading ? '<span class="spin" style="display:inline-block;width:13px;height:13px;margin-right:8px;border:2px solid #2b3a5c;border-top-color:#5b8cff;border-radius:50%;animation:danahspin .8s linear infinite;vertical-align:-2px"></span>' : ''}${esc(docsState.msg)}</div><style>@keyframes danahspin{to{transform:rotate(360deg)}}</style>`
+      : '';
+
+    // Only analyst-and-above may upload — the server enforces it (require_analyst on the route),
+    // so a viewer offered an upload form would get a 403 they could not understand. Show the form
+    // only to roles that can actually use it; a viewer gets the read-only library and a plain note.
+    const role = (state.user && state.user.role) || '';
+    const canUpload = role === 'admin' || role === 'executive' || role === 'analyst';
+    const uploadSection = canUpload
+      ? `<div class="card card-pad section">
+      <h3 style="font-family:var(--display);font-size:15px;font-weight:600;margin-bottom:4px">Upload a document</h3>
+      <p class="muted" style="font-size:12px;margin-bottom:16px">Text, Markdown or PDF. It is chunked and embedded with the real provider, then becomes citable in chat. You can only classify at or below your own clearance (${esc(((state.user && state.user.clearance) || 'OFFICIAL').replace('_', '-'))}).</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <div style="flex:2;min-width:220px"><label style="display:block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">File</label>
+          <input id="kbFile" type="file" accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" style="width:100%;font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--ink)"></div>
+        <div style="flex:2;min-width:180px"><label style="display:block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Title (optional)</label>
+          <input id="kbTitle" class="inp" placeholder="Defaults to the filename"></div>
+        <div style="flex:1;min-width:150px"><label style="display:block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Classification</label>
+          <div class="select" style="width:100%"><select id="kbClass">${opts}</select></div></div>
+        <button id="kbUploadBtn" class="btn btn-primary" onclick="danahUpload()" ${docsState.uploading ? 'disabled' : ''}>Upload &amp; index</button>
+      </div>
+      ${msg}
+    </div>`
+      : `<div class="callout section" style="border-color:var(--line);background:var(--surface-2)">${typeof ic === 'function' ? ic('lock', 13) : ''} &nbsp;Uploading documents requires <b>analyst</b> clearance or above. Your role (<b>${esc(role || 'viewer')}</b>) has read-only access to the knowledge base — you can see the documents below that your clearance permits.</div>`;
+
+    return `
+    <div class="page-head">
+      <div class="page-title"><h1>Knowledge Base</h1><p>Upload documents into the ministry's grounded knowledge base. Once indexed, the Live Agent can cite them.</p></div>
+      <div class="page-controls">
+        <span class="pill bg-green tone-green">${indexed}/${total} indexed</span>
+        <button class="btn btn-ghost" onclick="danahRefreshDocs()">Refresh</button>
+      </div>
+    </div>
+
+    ${uploadSection}
+
+    <div class="card section">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="font-family:var(--display);font-size:15px;font-weight:600">Indexed documents</h3>
+        <span class="muted" style="font-size:12px">${(c.pending || 0)} pending · ${(c.processing || 0)} indexing · ${indexed} indexed · ${(c.failed || 0)} failed</span>
+      </div>
+      <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Document</th><th>Classification</th><th>Status</th><th>Lang</th><th>Uploaded</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+    </div>
+
+    <div class="callout" style="border-color:var(--green-line);background:var(--green-bg)">${typeof ic === 'function' ? ic('shield', 13, 'tone-green') : ''} &nbsp;Only documents at or below your clearance are listed — the classification filter is a database rule, not a UI one. What you upload here is what grounds the assistant's answers.</div>`;
+  }
+
+  // Route the Knowledge page through the real one when live; keep the prototype's synthetic
+  // monitor for the offline demo. PAGES holds the function reference, so this must mutate the
+  // map (reassigning window.pageKnowledge would not change what render() dispatches to).
+  if (typeof PAGES !== 'undefined' && PAGES.knowledge) {
+    const _protoKnowledgePage = PAGES.knowledge;
+    PAGES.knowledge = function () {
+      return state.live ? realKnowledgePage() : _protoKnowledgePage();
+    };
+  }
+
+  // Refresh the live data when the user actually navigates to these pages, not only at login.
+  const _protoGo = window.go;
+  if (typeof _protoGo === 'function') {
+    window.go = function (route) {
+      const out = _protoGo.apply(this, arguments);
+      if (state.live) {
+        if (route === 'alerts') refreshAlerts();
+        if (route === 'knowledge') refreshDocuments();
+      }
+      return out;
+    };
   }
 
   /* The hero panel — the first thing anyone sees — shipped with invented numbers:
