@@ -101,6 +101,12 @@ class Settings(BaseSettings):
     # is ever published without an executive deciding to publish it — so a deployment seeded with
     # an admin alone has an approval queue that no one can clear and no one is told about.
     approver_email: str = "executive@ministry.gov"
+    # An analyst (OFFICIAL ceiling) and a viewer (INTERNAL ceiling). Seeded so the
+    # classification boundary can actually be demonstrated end to end: a viewer signing in
+    # cannot retrieve OFFICIAL-SENSITIVE content, and the block happens in SQL, not in the UI.
+    # Without these accounts the strongest security property of the system is unShowable.
+    analyst_email: str = "analyst@ministry.gov"
+    viewer_email: str = "viewer@ministry.gov"
     admin_initial_password: SecretStr = SecretStr("")
     rate_limit_login_per_minute: int = 5
     rate_limit_chat_per_minute: int = 20

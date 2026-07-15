@@ -160,6 +160,45 @@ async def seed_approver(session: Any, settings: Settings) -> User | None:
     return approver
 
 
+async def seed_demo_users(session: Any, settings: Settings) -> None:
+    """Seed one analyst and one viewer so the classification boundary is demonstrable.
+
+    admin/executive both clear OFFICIAL-SENSITIVE, so with only those two accounts you can never
+    show the system *refusing* to disclose. The analyst (ceiling OFFICIAL) and the viewer
+    (ceiling INTERNAL) exist precisely to be logged in as during a demo: the viewer's queries
+    physically cannot return OFFICIAL-SENSITIVE rows — the exclusion is a SQL WHERE clause, not a
+    UI toggle. Same initial password; rotate on first login.
+    """
+    from sqlalchemy import select
+
+    password = settings.admin_initial_password.get_secret_value()
+    if not password:
+        return
+
+    wanted = [
+        (settings.analyst_email.lower(), "Ministry Analyst", Role.ANALYST),
+        (settings.viewer_email.lower(), "Ministry Viewer", Role.VIEWER),
+    ]
+    for email, full_name, role in wanted:
+        existing = await session.scalar(select(User).where(User.email == email))
+        if existing is not None:
+            log.info("demo_user_exists", email=email, role=existing.role.value)
+            continue
+        session.add(
+            User(
+                id=uuid.uuid4(),
+                email=email,
+                full_name=full_name,
+                password_hash=hash_password(password),
+                role=role,
+                is_active=True,
+            )
+        )
+        await session.flush()
+        log.info("demo_user_created", email=email, role=role.value)
+        print(f"  [ok] {role.value} created: {email}  (same initial password — rotate it)")
+
+
 async def seed_sources(session: Any, settings: Settings) -> int:
     from sqlalchemy import select
 
@@ -259,6 +298,7 @@ async def main() -> None:
     async with factory() as session:
         admin = await seed_admin(session, settings)
         await seed_approver(session, settings)
+        await seed_demo_users(session, settings)
         sources = await seed_sources(session, settings)
         docs, indexed = await seed_documents(session, settings, admin)
         await session.commit()

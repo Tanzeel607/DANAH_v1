@@ -284,6 +284,42 @@
     showLogin();
   };
 
+  /* ---- role switching is decided by the server, not the browser --------
+   * The prototype let you switch between eleven roles client-side ("Preview as
+   * C-Suite", "Switch verified role"). That is now actively misleading: your
+   * role comes from your login and is enforced on every request, so switching
+   * it in the browser changes the chrome but not what the API will return — a
+   * viewer who "previews as C-Suite" still gets no OFFICIAL-SENSITIVE data. So
+   * when live, every entry point (header chip, visibility card, Access page,
+   * Settings) is intercepted and explains the real behaviour: sign in as a
+   * different user to see a different role. Offline, the prototype's simulated
+   * switcher is left intact so a backend-less demo still works.            */
+  const _protoSetRole = window.setRole;
+  const _protoRoleSwitcher = window.openRoleSwitcher;
+  const _protoPreviewLower = window.previewLowerRank;
+  const roleMsg =
+    'Your role is set by your login and enforced on the server — it cannot be switched in the ' +
+    'browser. Sign out and sign in as admin, executive, analyst or viewer to see each role.';
+
+  window.setRole = function (...args) {
+    if (state.live) { if (typeof toast === 'function') toast(roleMsg); return; }
+    return typeof _protoSetRole === 'function' ? _protoSetRole.apply(this, args) : undefined;
+  };
+  window.openRoleSwitcher = function (...args) {
+    if (state.live) { if (typeof toast === 'function') toast(roleMsg); return; }
+    return typeof _protoRoleSwitcher === 'function' ? _protoRoleSwitcher.apply(this, args) : undefined;
+  };
+  window.previewLowerRank = function (...args) {
+    if (state.live) {
+      if (typeof toast === 'function') {
+        toast('Access is enforced server-side. To see the restricted view, sign in as ' +
+          'viewer@ministry.gov rather than previewing here.');
+      }
+      return;
+    }
+    return typeof _protoPreviewLower === 'function' ? _protoPreviewLower.apply(this, args) : undefined;
+  };
+
   /* =====================================================================
      2. LIVE AGENT CHAT — a real model, real citations, real abstention
      ===================================================================== */
