@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "sh -c 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers'",
+    "startCommand": "sh -c 'alembic upgrade head && (python -m scripts.seed || true) && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers'",
     "healthcheckPath": "/api/healthz",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
