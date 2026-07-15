@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#F4F5F8; --surface:#FFFFFF; --surface-2:#FAFBFC;
-  --ink:#1E2A3A; --ink-2:#5B6675; --ink-3:#8A94A6; --ink-4:#AEB6C2;
+  --ink:#1B2735; --ink-2:#515C6B; --ink-3:#6E7A8C; --ink-4:#9BA4B2;
   --line:#ECEEF2; --line-2:#F3F5F8;
   --orange:#ED7D11; --orange-bg:#FEF4EA; --orange-line:#F7DCB6;
   --green:#15A05A; --green-bg:#E7F5EE; --green-line:#BFE5D2;
@@ -28,7 +28,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.6}
 ::selection{background:var(--orange-bg)}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -83,8 +83,8 @@ input{font-family:inherit}
 
 /* ---- sidebar nav ---- */
 .nav{flex:1;overflow-y:auto;padding:16px 14px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#3F4A5A;font-size:13.5px;
-  font-weight:500;cursor:pointer;position:relative;margin-bottom:2px;transition:background .13s,color .13s}
+.nav-item{display:flex;align-items:center;gap:13px;padding:12px 13px;border-radius:10px;color:#3A4553;font-size:14.5px;
+  font-weight:500;cursor:pointer;position:relative;margin-bottom:3px;transition:background .13s,color .13s}
 .nav-item svg{color:#7A8699;transition:color .13s}
 .nav-item:hover{background:var(--surface-2);color:var(--ink)}
 .nav-item.active{background:var(--orange-bg);color:var(--orange);font-weight:600}
@@ -1834,7 +1834,7 @@ function danahRunningCard(){
  return `<div class="run-card">
    <div class="run-top"><span class="run-dot"></span>
      <div class="run-id"><div class="run-h">${tx('DANAH is running')} ${ic('activity',15)}</div>
-       <div class="run-sub">${tx('24-Hour Agentic Intelligence Circuit')} · <span class="muted">${tx('synthetic demo logic · production hooks ready')}</span></div></div>
+       <div class="run-sub">${tx('Live operational overview')}</div></div>
      <span class="run-next">${ic('clock',13)} ${tx('Next')}: ${CIRCUIT.next}</span></div>
    <div class="run-grid">
      ${runStat('rcRefresh',CIRCUIT.lastRefresh||tx('just now'),tx('Last refresh'),'refresh')}
@@ -1847,8 +1847,8 @@ function danahRunningCard(){
      ${runStat(null,tx('Required'),tx('Human approval'),'user')}
    </div>
    <div class="run-foot no-print">
-     <span class="link" onclick="go('circuit')">${tx('Open Intelligence Circuit')} ${ic('arrow',14)}</span>
-     <button class="btn btn-ghost btn-sm" onclick="runCycle('midday')">${ic('play',14)} ${tx('Simulate next cycle')}</button></div>
+     <span class="link" onclick="go('agents')">${tx('Open AI Agents')} ${ic('arrow',14)}</span>
+     <button class="btn btn-ghost btn-sm" onclick="runPipeline()">${ic('play',14)} ${tx('Run pipeline now')}</button></div>
  </div>`;
 }
 function readyForYou(){
@@ -2986,29 +2986,15 @@ function insightRow(i){
 /* ============================================================== SIDEBAR == */
 const NAV = [
   {id:'home',label:'Command Centre',icon:'home'},
-  {id:'circuit',label:'24-Hour Circuit',icon:'activity',badge:'Live'},
-  {id:'overview',label:'National Overview',icon:'globe'},
-  {id:'ministry',label:'Ministry Intelligence',icon:'building',expand:true},
+  {divider:true},
   {id:'risks',label:'Risks & Blind Spots',icon:'alert'},
-  {id:'success',label:'UAE Success Stories',icon:'award'},
   {id:'policy',label:'Policy Watch',icon:'policy'},
-  {id:'priorities',label:'Strategic Priorities',icon:'target'},
-  {id:'actions',label:'Action Tracker',icon:'checks'},
-  {id:'a4',label:'Cabinet Head A4',icon:'doc'},
-  {id:'memory',label:'Strategic Memory',icon:'memory'},
-  {id:'reports',label:'Reports & Insights',icon:'chart'},
+  {id:'success',label:'UAE Success Stories',icon:'award'},
+  {id:'agents',label:'AI Agents',icon:'bot'},
   {id:'knowledge',label:'Verified Knowledge',icon:'shield'},
-  {id:'certified',label:'Certified Source Registry',icon:'shield',badge:'New'},
-  {id:'behavior',label:'Behavioral Intelligence',icon:'gauge'},
+  {id:'reports',label:'Reports & Insights',icon:'chart'},
   {divider:true},
-  {id:'agents',label:'AI Agents',icon:'bot',badge:'New'},
-  {id:'csuite',label:'C-Suite Deep Intelligence',icon:'spark'},
-  {id:'webhooks',label:'Webhook Control Centre',icon:'link',badge:'Live'},
-  {id:'automation',label:'Automation Log',icon:'activity'},
   {id:'governance',label:'Governance & Audit',icon:'scale2'},
-  {id:'access',label:'Official Access',icon:'user'},
-  {id:'adoption',label:'Adoption Readiness',icon:'present'},
-  {divider:true},
   {id:'alerts',label:'Alerts',icon:'bell'},
   {id:'settings',label:'Settings',icon:'sliders'}
 ];
@@ -3144,10 +3130,8 @@ function pageHome(){
       ${['What emerging risks threaten Vision 2031?','Which opportunities require immediate investment?','Prepare the executive briefing for tomorrow'].map(q=>
         `<button class="ask-chip" onclick="askDanah(this.dataset.q)" data-q="${q}">${tx(q)}</button>`).join('')}
     </div>
-    <div class="cmd-grid">
-      ${healthCard()}
+    <div class="cmd-grid" style="grid-template-columns:1fr">
       ${decisionsCard(m)}
-      ${changesCard()}
     </div>
   </div>`;
 
@@ -3155,11 +3139,10 @@ function pageHome(){
   const snapshot = `
   <div class="panel">
     <div class="panel-head"><h3>${tt('sec.snapshot','NATIONAL SNAPSHOT')}</h3><span class="panel-sub">${tx("Across")} ${m==='all'?tx("all ministries"):mName(m)}</span></div>
-    <div class="snap-grid">
-      ${statCard(capN(opps,3),'Top Opportunities','High-impact opportunities to accelerate growth','opportunity')}
-      ${statCard(capN(risks,2),'Top Risks','Critical risks that require leadership attention','risk')}
-      ${statCard(capN(succ,1),'Top Success Story','UAE achievements making a global impact','success')}
-      ${focusCard()}
+    <div class="snap-grid" style="grid-template-columns:repeat(3,1fr)">
+      ${statCard(opps.length,'Top Opportunities','High-impact opportunities to accelerate growth','opportunity')}
+      ${statCard(risks.length,'Top Risks','Critical risks that require leadership attention','risk')}
+      ${statCard(succ.length,'Top Success Stories','UAE achievements making a global impact','success')}
     </div>
   </div>`;
 
@@ -3186,7 +3169,7 @@ function pageHome(){
     </div>
   </div>`;
 
-  return `${titleRow}${danahRunningCard()}${visibilityCard()}${engineCard()}${command}${readyForYou()}${snapshot}${hub}${tracker}`;
+  return `${titleRow}${danahRunningCard()}${command}${snapshot}`;
 }
 
 /* ---- command-layer components ---- */
@@ -3412,7 +3395,7 @@ function pageAgents(){
 
   <div class="section">
     <div class="section-head"><div class="st"><div class="ic">${ic('layers',17)}</div>
-      <div><h3>${tx("Agent Roster")}</h3><p>${tx("13 pipeline agents · synthetic operating data")}</p></div></div></div>
+      <div><h3>${tx("Agent Roster")}</h3><p>${tx("The live pipeline runs six orchestrated agents · this roster shows the fuller production set · synthetic operating data")}</p></div></div></div>
     <div class="grid g-3">${AGENTS.map(agentCard).join('')}</div>
   </div>`;
 }
@@ -3781,7 +3764,7 @@ function pageSettings(){
       <p class="muted" style="font-size:12px;margin-bottom:12px">${tx("Enable or pause individual agents in the orchestration pipeline.")}</p>
       ${AGENTS.slice(0,7).map(a=>`<div class="toggle"><div><div class="tg-l">${tx(a.name)}</div><div class="tg-d">${pct(a.conf)} ${tx("confidence")}</div></div>
         <div class="sw on" onclick="this.classList.toggle('on')"></div></div>`).join('')}
-      <p class="muted" style="font-size:11.5px;margin-top:12px">${tx("+ 6 more agents active. Full agent roster on the AI Agents page.")}</p>
+      <p class="muted" style="font-size:11.5px;margin-top:12px">${tx("The live pipeline runs six orchestrated agents · full roster on the AI Agents page.")}</p>
     </div>
 
     <div class="card card-pad">
@@ -3811,7 +3794,7 @@ function pageSettings(){
 
     <div class="card card-pad" style="grid-column:1/-1">
       <h3 style="font-family:var(--display);font-size:15px;font-weight:600;margin-bottom:6px">${ic('shield',16)} ${tx('Session & access')}</h3>
-      <p class="muted" style="font-size:12px;margin-bottom:14px">${tx('You are signed in with a verified government identity (simulated). Production uses government SSO.')}</p>
+      <p class="muted" style="font-size:12px;margin-bottom:14px">${tx('You are signed in to DANAH with an encrypted account (JWT + argon2id). Government Single Sign-On (SSO) is a planned production upgrade.')}</p>
       <div class="set-row"><div><div class="tg-l">${SESSION?SESSION.name:'Fatma Almulla'}</div><div class="tg-d">${roleObj().name} · ${tx(roleObj().clearance)} · L${lvl()} · ${SESSION?tx(SESSION.method):tx('Dummy SSO · prototype')}</div></div>
         <span class="pill bg-green tone-green" style="font-size:11px"><span class="id-dot"></span> ${ic('shield',12)} ${tx('Verified')}</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
@@ -3839,8 +3822,8 @@ function toggle(l,d,on){return `<div class="toggle"><div><div class="tg-l">${tx(
 function pageHelp(){
   const faqs=[
     [tx('What is DANAH?'),tx('DANAH is a multi-agent strategic intelligence platform that monitors, analyses, prioritises and recommends actions across UAE ministries, sectors, risks, opportunities and national priorities.')],
-    [tx('How does the agent pipeline work?'),tx('Thirteen specialised agents run as an orchestrated workflow — from data collection and source validation through analysis, prioritisation, recommendation, briefing and notification. Run it any time from the AI Agents page.')],
-    [tx('Is this real data?'),tx('No. This prototype runs entirely on synthetic, clearly-labelled data. The architecture is designed so live ministry feeds, document ingestion and an AI engine can replace the mock layer without changing the interface.')],
+    [tx('How does the agent pipeline work?'),tx('Six specialised agents run as an orchestrated workflow — signal triage, then risk, opportunity and policy analysis, briefing and memory. Run it any time from the AI Agents page.')],
+    [tx('Is this real data?'),tx('When the LIVE badge is green, the chat answers, insights, pipeline runs and audit log are produced by the real backend and AI models. A few overview panels still show sample data and are labelled as such; those are the next to be wired.')],
     [tx('How do I generate a leadership brief?'),tx('Open Reports & Insights, preview any report, then download it. Briefs are composed by the Briefing Agent in an executive-ready format.')]
   ];
   return `

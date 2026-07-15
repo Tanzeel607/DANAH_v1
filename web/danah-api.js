@@ -1190,13 +1190,8 @@
      they are badged, not silently left to be mistaken for real. Naming them is more useful to
      the client than hiding them: it says exactly what remains to be built.                   */
   const SIMULATED_PANELS = [
-    'DANAH Live Intelligence Engine',
-    'What Changed Since Yesterday',
-    'National Strategic Health',
     'Agent Roster',
     'Cabinet Affairs agents',
-    'ACTION TRACKER',
-    'NATIONAL SNAPSHOT',
   ];
 
   function markSimulated() {
