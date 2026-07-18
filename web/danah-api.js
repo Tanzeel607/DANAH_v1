@@ -175,9 +175,9 @@
   ];
   window.danahPickPersona = function (email) {
     const e = document.getElementById('loginEmail'); if (e) e.value = email;
-    document.querySelectorAll('.danah-persona').forEach((c) => { c.style.borderColor = '#243049'; });
+    document.querySelectorAll('.danah-persona').forEach((c) => { c.style.borderColor = '#ECECEC'; c.style.background = '#fff'; });
     const card = document.querySelector('.danah-persona[data-email="' + email + '"]');
-    if (card) card.style.borderColor = '#5b8cff';
+    if (card) { card.style.borderColor = '#F5B301'; card.style.background = '#FEF6DE'; }
     // Fill the email only — the password is always typed by hand. Clear anything the browser
     // may have auto-filled, then focus the field so it can be entered manually.
     const p = document.getElementById('loginPass'); if (p) { p.value = ''; p.focus(); }
@@ -189,14 +189,14 @@
     const emblem = (typeof emblemSVG === 'function') ? emblemSVG() : '';
     const cards = PERSONAS.map((p) => `
       <button type="button" class="danah-persona" data-email="${p.email}" onclick="danahPickPersona('${p.email}')"
-        style="text-align:left;border:1px solid ${p.email === 'admin@ministry.gov' ? '#5b8cff' : '#243049'};background:#0e1526;border-radius:11px;padding:11px 12px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:5px">
+        style="text-align:left;border:1px solid ${p.email === 'admin@ministry.gov' ? '#F5B301' : '#ECECEC'};background:${p.email === 'admin@ministry.gov' ? '#FEF6DE' : '#fff'};border-radius:8px;padding:11px 12px;cursor:pointer;transition:border-color .12s,background .12s;display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;align-items:center;gap:7px">
           <span style="width:8px;height:8px;border-radius:50%;background:${p.c};flex:none"></span>
-          <span style="color:#e8eefc;font-size:13px;font-weight:700">${p.title}</span>
-          <span style="margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.05em;color:${p.c};background:${p.c}22;border:1px solid ${p.c}55;padding:2px 7px;border-radius:20px;text-transform:uppercase">${p.role}</span>
+          <span style="color:#333;font-size:13px;font-weight:700">${p.title}</span>
+          <span style="margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.05em;color:#7a5c00;background:#FEF6DE;border:1px solid #F4DE9C;padding:2px 7px;border-radius:20px;text-transform:uppercase">${p.role}</span>
         </div>
-        <div style="font-size:11px;color:#8fa0c4">Clearance <b style="color:#c7d4ef">${p.clr}</b></div>
-        <div style="font-size:11px;color:#7f8db0">${p.can}</div>
+        <div style="font-size:11px;color:#6E6E6E">Clearance <b style="color:#333">${p.clr}</b></div>
+        <div style="font-size:11px;color:#9B9B9B">${p.can}</div>
       </button>`).join('');
     r.innerHTML = `
       <div class="login-scrim" role="dialog" aria-modal="true" aria-label="Official Sign-In">
@@ -206,17 +206,17 @@
             <div><h1>UNITED ARAB EMIRATES</h1><h2>MINISTRY OF CABINET AFFAIRS</h2></div>
           </div>
           <div class="login-sub">DANAH — Agentic AI Command Centre. Pick an account to fill its email, then type the password.</div>
-          <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#7f8db0;margin:4px 2px 9px;text-transform:uppercase">Official accounts · role &amp; clearance shown</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#9B9B9B;margin:4px 2px 9px;text-transform:uppercase">Official accounts · role &amp; clearance shown</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:9px;margin-bottom:16px">${cards}</div>
           <div class="login-field"><label>Email</label>
             <input id="loginEmail" type="email" autocomplete="username" value="admin@ministry.gov"
-              style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid #2a3550;background:#0e1526;color:#e8eefc;font-size:14px" /></div>
-          <div class="login-field"><label>Password <span style="font-weight:400;color:#7f8db0;text-transform:none;letter-spacing:0">· type it manually</span></label>
+              style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid #ECECEC;background:#fff;color:#333;font-size:14px" /></div>
+          <div class="login-field"><label>Password <span style="font-weight:400;color:#9B9B9B;text-transform:none;letter-spacing:0">· type it manually</span></label>
             <input id="loginPass" type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
-              style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid #2a3550;background:#0e1526;color:#e8eefc;font-size:14px" /></div>
-          <div id="loginErr" style="display:none;color:#ff8095;font-size:12.5px;margin:8px 2px 0"></div>
+              style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid #ECECEC;background:#fff;color:#333;font-size:14px" /></div>
+          <div id="loginErr" style="display:none;color:#D64545;font-size:12.5px;margin:8px 2px 0"></div>
           <button class="btn btn-primary" id="loginBtn" style="width:100%;margin-top:14px">Sign in</button>
-          <div style="margin-top:12px;font-size:11.5px;color:#7f8db0;line-height:1.55">
+          <div style="margin-top:12px;font-size:11.5px;color:#9B9B9B;line-height:1.55">
             All accounts are real and share the demo password you set. Roles and clearance are
             decided by the backend (argon2 + JWT) and enforced on every request — never in this
             browser. The four backend roles are the real access tiers these titles map onto.
@@ -1268,7 +1268,7 @@
           </div>
           ${apprState.filter === 'pending'
         ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-2)">
-                 <button class="btn btn-primary btn-sm" onclick="danahDecide('${a.id}','approved')">${ic('check', 14)} Approve &amp; publish</button>
+                 <button class="btn btn-primary btn-sm" data-tour="approve" onclick="danahDecide('${a.id}','approved')">${ic('check', 14)} Approve &amp; publish</button>
                  <button class="btn btn-ghost btn-sm" onclick="danahDecide('${a.id}','changes_requested')">Request changes</button>
                  <button class="btn btn-ghost btn-sm" onclick="danahDecide('${a.id}','rejected')">Reject</button>
                </div>`
@@ -1607,14 +1607,17 @@
         <td><span class="cls-tag">${esc((u.clearance || '').replace('_', '-'))}</span></td>
         <td>${u.is_active ? '<span class="pill bg-green tone-green">Active</span>' : '<span class="pill bg-red tone-red">Disabled</span>'}</td>
         <td style="font-size:12px;color:var(--ink-3)">${u.last_login_at ? esc(relativeTime(u.last_login_at)) : 'never'}</td>
-        <td>${u.id === meId ? '<span class="muted" style="font-size:11px">you</span>' : (u.is_active
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" data-tour="reset-pw" onclick="danahResetPw('${u.id}','${esc(u.email)}')">Reset password</button>
+          ${u.id === meId ? '' : (u.is_active
         ? `<button class="btn btn-ghost btn-sm" onclick="danahToggleUser('${u.id}',false)">Deactivate</button>`
-        : `<button class="btn btn-ghost btn-sm" onclick="danahToggleUser('${u.id}',true)">Activate</button>`)}</td>
+        : `<button class="btn btn-ghost btn-sm" onclick="danahToggleUser('${u.id}',true)">Activate</button>`)}
+        </td>
       </tr>`).join('');
     const msg = usersState.msg ? `<div class="callout ${/fail|exist|not permitted/i.test(usersState.msg) ? '' : 'amber'}" style="margin-bottom:14px">${esc(usersState.msg)}</div>` : '';
     return `
       <div class="page-head"><div class="page-title"><h1>User Management</h1><p>Create accounts and set roles. Clearance follows the role; changing a password or disabling an account revokes its tokens at once. Every change is audited.</p></div>
-        <div class="page-controls"><button class="btn btn-ghost" onclick="danahRefreshUsers()">Refresh</button><button class="btn btn-primary" onclick="danahNewUser()">${ic('user', 16)} Create user</button></div></div>
+        <div class="page-controls"><button class="btn btn-ghost" onclick="danahRefreshUsers()">Refresh</button><button class="btn btn-primary" data-tour="new-user" onclick="danahNewUser()">${ic('user', 16)} Create user</button></div></div>
       ${msg}
       <div class="card section" style="overflow-x:auto"><table class="tbl"><thead><tr><th>User</th><th>Role</th><th>Clearance</th><th>Status</th><th>Last login</th><th></th></tr></thead>
         <tbody>${usersState.loading && !usersState.items.length ? '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Loading…</td></tr>' : (rows || '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No users.</td></tr>')}</tbody></table></div>`;
@@ -1660,7 +1663,7 @@
         <td style="font-size:12px;color:var(--ink-3)">${s.last_synced_at ? esc(relativeTime(s.last_synced_at)) : 'never'}${s.last_status ? ' · ' + esc(s.last_status) : ''}</td>
         <td>${s.enabled ? '<span class="pill bg-green tone-green">Enabled</span>' : '<span class="pill" style="background:var(--surface-2);color:var(--ink-3);border:1px solid var(--line)">Disabled</span>'}</td>
         <td style="white-space:nowrap">
-          ${analyst ? `<button class="btn btn-ghost btn-sm" onclick="danahSyncSource('${s.id}')">${ic('refresh', 13)} Sync</button>` : ''}
+          ${analyst ? `<button class="btn btn-ghost btn-sm" data-tour="sync" onclick="danahSyncSource('${s.id}')">${ic('refresh', 13)} Sync</button>` : ''}
           ${admin ? `<button class="btn btn-ghost btn-sm" onclick="danahToggleSource('${s.id}',${s.enabled ? 'false' : 'true'})">${s.enabled ? 'Disable' : 'Enable'}</button>` : ''}
         </td>
       </tr>`).join('');
@@ -1897,7 +1900,7 @@
     const msg = tasksState.msg ? `<div class="callout ${/fail|require/i.test(tasksState.msg) ? '' : 'amber'}" style="margin-bottom:14px">${esc(tasksState.msg)}</div>` : '';
     return `
       <div class="page-head"><div class="page-title"><h1>Action Tracker</h1><p>Decisions turned into owned, tracked actions — clearance-filtered, with every change written to the audit log.${analyst ? '' : ' Read-only for your role.'}</p></div>
-        <div class="page-controls"><button class="btn btn-ghost" onclick="danahRefreshTasks()">Refresh</button>${analyst ? `<button class="btn btn-primary" onclick="danahNewTask()">${ic('target', 16)} New action</button>` : ''}</div></div>
+        <div class="page-controls"><button class="btn btn-ghost" onclick="danahRefreshTasks()">Refresh</button>${analyst ? `<button class="btn btn-primary" data-tour="new-task" onclick="danahNewTask()">${ic('target', 16)} New action</button>` : ''}</div></div>
       ${msg}
       ${tasksState.loading && !tasksState.items.length ? '<div class="callout amber">Loading…</div>' : `<div class="grid g-3" style="align-items:start">${board}</div>`}`;
   }
@@ -2165,6 +2168,294 @@
   };
   window.danahReplayTour = function () { window.danahMaybeTour(); };
   window.addEventListener('resize', () => { const o = document.getElementById('danah-tour'); if (o) tourPosition(o); });
+
+  /* =====================================================================
+     TOP NAVIGATION — the white/yellow redesign replaces the left sidebar with
+     a horizontal top menu. Items group into click dropdowns; go(), navLocked()
+     and the alerts badge are unchanged. The sidebar is hidden via CSS.
+     ===================================================================== */
+  function danahEnsureTopNav() {
+    let el = document.getElementById('danah-topnav');
+    if (el) return el;
+    const header = document.getElementById('header');
+    if (!header || !header.parentNode) return null;
+    el = document.createElement('div');
+    el.id = 'danah-topnav';
+    el.innerHTML = '<div class="tn-inner"></div>';
+    header.parentNode.insertBefore(el, header.nextSibling);
+    return el;
+  }
+  function danahRenderTopNav() {
+    if (!state.live) { const e = document.getElementById('danah-topnav'); if (e) e.style.display = 'none'; return; }
+    const wrap = danahEnsureTopNav(); if (!wrap) return;
+    wrap.style.display = '';
+    const inner = wrap.querySelector('.tn-inner'); if (!inner) return;
+    const defs = {}; if (typeof NAV !== 'undefined') NAV.forEach((n) => { if (!n.divider) defs[n.id] = n; });
+    const locked = (id) => (typeof navLocked === 'function') && navLocked(id);
+    const cur = (typeof S !== 'undefined') ? S.route : 'home';
+    const unread = (typeof ALERTS !== 'undefined') ? ALERTS.filter((a) => !a.read).length : 0;
+    const lbl = (id, fb) => (typeof tt === 'function') ? tt('nav.' + id, fb) : fb;
+    const groups = [
+      { id: 'home', label: lbl('home', 'Command Centre') },
+      { label: 'Intelligence', ids: ['risks', 'policy', 'success', 'feed', 'chats', 'agents', 'knowledge', 'sources'] },
+      { label: 'Decisions', ids: ['tasks', 'approvals', 'memory'] },
+      { id: 'reports', label: lbl('reports', 'Reports') },
+      { label: 'Administration', ids: ['users', 'governance'] },
+    ];
+    const right = [{ id: 'alerts', label: lbl('alerts', 'Alerts') }, { id: 'settings', label: lbl('settings', 'Settings') }];
+    const NAVTIP = { home: 'Your live overview and the decisions awaiting you', Intelligence: 'Insights, the intelligence feed, AI agents and verified knowledge', Decisions: 'Track actions, approve & publish, and strategic memory', reports: 'Bilingual executive briefings — English and Arabic', Administration: 'Manage users and view the tamper-evident audit log', alerts: 'Notifications addressed to your role', settings: 'Appearance, language and your session' };
+    const dItem = (id) => {
+      const it = defs[id]; if (!it || locked(id)) return '';
+      return `<div class="di ${cur === id ? 'on' : ''}" data-route="${id}" onclick="danahNavGo(event,'${id}')">${ic(it.icon, 17)}<span>${esc(lbl(id, it.label))}</span>${id === 'alerts' && unread ? `<span class="tn-badge">${unread}</span>` : ''}</div>`;
+    };
+    const topItem = (g) => {
+      if (g.id) { if (locked(g.id)) return ''; return `<div class="tn-item ${cur === g.id ? 'on' : ''}" data-tnkey="${g.id}" data-tip-b="${esc(NAVTIP[g.id] || '')}" onclick="danahNavGo(event,'${g.id}')">${esc(g.label)}</div>`; }
+      const items = g.ids.map(dItem).filter(Boolean); if (!items.length) return '';
+      const activeIn = g.ids.indexOf(cur) >= 0;
+      const gid = 'tng-' + g.label.replace(/\W/g, '');
+      return `<div class="tn-item ${activeIn ? 'on' : ''}" id="${gid}" data-tip-b="${esc(NAVTIP[g.label] || '')}" onclick="danahNavDrop(event,'${gid}')">${esc(g.label)}<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg><div class="tn-drop" onclick="event.stopPropagation()">${items.join('')}</div></div>`;
+    };
+    inner.innerHTML = groups.map(topItem).join('')
+      + '<span style="flex:1"></span>'
+      + right.map((r) => locked(r.id) ? '' : `<div class="tn-item ${cur === r.id ? 'on' : ''}" data-tnkey="${r.id}" data-tip-b="${esc(NAVTIP[r.id] || '')}" onclick="danahNavGo(event,'${r.id}')">${esc(r.label)}${r.id === 'alerts' && unread ? `<span class="tn-badge">${unread}</span>` : ''}</div>`).join('');
+  }
+  window.danahRenderTopNav = danahRenderTopNav;
+  window.danahNavDrop = function (e, gid) { if (e) e.stopPropagation(); const el = document.getElementById(gid); if (!el) return; const open = el.classList.contains('open'); document.querySelectorAll('#danah-topnav .tn-item.open').forEach((x) => x.classList.remove('open')); if (!open) el.classList.add('open'); };
+  window.danahNavGo = function (e, id) { if (e) e.stopPropagation(); document.querySelectorAll('#danah-topnav .tn-item.open').forEach((x) => x.classList.remove('open')); if (typeof go === 'function') go(id); };
+  document.addEventListener('click', function () { document.querySelectorAll('#danah-topnav .tn-item.open').forEach((x) => x.classList.remove('open')); });
+  const _renderSidebarTN = window.renderSidebar;
+  window.renderSidebar = function () { if (state.live) { danahRenderTopNav(); return; } return typeof _renderSidebarTN === 'function' ? _renderSidebarTN.apply(this, arguments) : undefined; };
+
+  /* ---------- admin: reset a user's password ---------- */
+  window.danahResetPw = function (id, email) {
+    if (typeof openModal !== 'function') return;
+    openModal(`<div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><div class="mh-ic bg-orange tone-orange">${ic('lock', 21)}</div><div><h3>Reset password</h3><p>${esc(email)} — every session this account holds is revoked immediately.</p></div><button class="modal-x" onclick="closeModal()">${ic('x', 18)}</button></div>
+      <div class="modal-body"><div class="field"><label>New password</label><input id="rpPass" class="inp" type="password" placeholder="At least 12 characters" autocomplete="new-password"></div><div id="rpErr" style="display:none;color:var(--red);font-size:12.5px;margin-top:6px"></div></div>
+      <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="danahDoResetPw('${id}')">Set new password</button></div></div>`);
+  };
+  window.danahDoResetPw = async function (id) {
+    const pass = (document.getElementById('rpPass') || {}).value || '';
+    const err = document.getElementById('rpErr');
+    try {
+      await call('/admin/users/' + id, { method: 'PATCH', body: { password: pass } });
+      if (typeof closeModal === 'function') closeModal();
+      usersState.msg = 'Password reset — the user must sign in again with the new password.';
+      await refreshUsers();
+    } catch (e) {
+      if (err) { err.textContent = e.status === 422 ? 'Password too short (needs at least 12 characters).' : (e.message || 'Reset failed.'); err.style.display = 'block'; }
+    }
+  };
+
+  /* =====================================================================
+     Guided tour anchored to the TOP NAV (redesign) + hover tooltips on the
+     main cards and controls. Reuses TState/TOUR_GUIDE from the polish block.
+     ===================================================================== */
+  (function () {
+    if (typeof TState === 'undefined') return;
+    const ANCH = {
+      home: 'k:home', reports: 'k:reports', alerts: 'k:alerts', settings: 'k:settings',
+      risks: 'g:Intelligence', policy: 'g:Intelligence', success: 'g:Intelligence', feed: 'g:Intelligence',
+      chats: 'g:Intelligence', agents: 'g:Intelligence', knowledge: 'g:Intelligence', sources: 'g:Intelligence',
+      tasks: 'g:Decisions', approvals: 'g:Decisions', memory: 'g:Decisions',
+      users: 'g:Administration', governance: 'g:Administration',
+    };
+    function anchorEl(route) {
+      const k = ANCH[route]; if (!k) return null;
+      if (k.slice(0, 2) === 'g:') return document.getElementById('tng-' + k.slice(2));
+      return document.querySelector('#danah-topnav .tn-item[data-tnkey="' + k.slice(2) + '"]');
+    }
+    function place(o, a) {
+      const narrow = window.innerWidth < 760;
+      if (a && !narrow) {
+        const r = a.getBoundingClientRect();
+        o.style.top = (r.bottom + 12) + 'px'; o.style.bottom = 'auto';
+        o.style.left = Math.max(12, Math.min(window.innerWidth - 372, r.left)) + 'px'; o.style.transform = 'none';
+      } else { o.style.left = '50%'; o.style.bottom = '22px'; o.style.top = 'auto'; o.style.transform = 'translateX(-50%)'; }
+    }
+    function cardEl() { let o = document.getElementById('danah-tour'); if (!o) { o = document.createElement('div'); o.id = 'danah-tour'; o.className = 'no-print'; document.body.appendChild(o); } return o; }
+    function clearHi() { document.querySelectorAll('#danah-topnav .tn-item.tn-tour').forEach((x) => x.classList.remove('tn-tour')); }
+    function show() {
+      const step = TState.steps[TState.i]; if (!step) { endTour(); return; }
+      if (typeof go === 'function') go(step);
+      const g = (typeof TOUR_GUIDE !== 'undefined' && TOUR_GUIDE[step]) || [step, ''];
+      const o = cardEl();
+      o.style.cssText = 'position:fixed;z-index:100000;background:#fff;color:#333;border:1px solid #ECECEC;border-radius:12px;box-shadow:0 18px 50px rgba(20,20,20,.2);padding:15px 17px;width:min(340px,92vw)';
+      o.innerHTML =
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#B98700;text-transform:uppercase">Tour · ${TState.i + 1}/${TState.steps.length}</span><button onclick="danahTourEnd()" style="margin-left:auto;background:none;border:none;color:#9B9B9B;cursor:pointer;font-size:12px">Skip</button></div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:#333">${esc(g[0])}</div>
+        <div style="font-size:12.5px;line-height:1.55;color:#6E6E6E">${esc(g[1])}</div>
+        <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:13px">${TState.i > 0 ? `<button class="btn btn-ghost btn-sm" onclick="danahTourNav(-1)">Back</button>` : ''}<button class="btn btn-primary btn-sm" onclick="danahTourNav(1)">${TState.i === TState.steps.length - 1 ? 'Done' : 'Next'}</button></div>`;
+      clearHi();
+      setTimeout(() => { const a = anchorEl(step); if (a) a.classList.add('tn-tour'); place(o, a); }, 130);
+    }
+    function endTour() { const o = document.getElementById('danah-tour'); if (o) o.remove(); clearHi(); }
+    window.danahTourEnd = endTour;
+    window.danahTourNav = function (d) { TState.i += d; if (TState.i >= TState.steps.length) { endTour(); return; } if (TState.i < 0) TState.i = 0; show(); };
+    window.danahMaybeTour = function () {
+      if (!state.live) return;
+      const order = ['home', 'risks', 'feed', 'chats', 'agents', 'knowledge', 'sources', 'reports', 'tasks', 'approvals', 'memory', 'users', 'governance', 'alerts', 'settings'];
+      TState.steps = order.filter((r) => (typeof TOUR_GUIDE !== 'undefined' && TOUR_GUIDE[r]) && (typeof window.navLocked !== 'function' || !window.navLocked(r)));
+      TState.i = 0; setTimeout(show, 450);
+    };
+    window.danahReplayTour = function () { window.danahMaybeTour(); };
+    window.addEventListener('resize', () => { const o = document.getElementById('danah-tour'); if (o) place(o, anchorEl(TState.steps[TState.i])); });
+  })();
+
+  /* ---- hover tooltips on the main cards / functionality ---- */
+  function danahApplyTips() {
+    const set = (sel, tip) => { document.querySelectorAll(sel).forEach((el) => { if (!el.getAttribute('data-tip') && !el.getAttribute('data-tip-b')) el.setAttribute('data-tip', tip); }); };
+    set('.run-card', 'Live operational overview — the real figures from DANAH’s last pipeline run.');
+    set('.askbar', 'Ask DANAH anything — it answers only from your verified documents, with citations.');
+    set('.snap .card, .snap .snap-card', 'Summary tile — open it for the full list.');
+    set('#content .ready-row', 'A decision DANAH prepared. Open it to review the evidence, then approve or reject.');
+    set('#content .cc-card', 'A live command-centre panel drawn from the backend.');
+  }
+  window.danahApplyTips = danahApplyTips;
+  const _renderWithTips = window.render;
+  if (typeof _renderWithTips === 'function') {
+    window.render = function () { const out = _renderWithTips.apply(this, arguments); try { danahApplyTips(); } catch (_) { /* non-fatal */ } return out; };
+  }
+
+  /* =====================================================================
+     Guided tour v2 — driver.js-style spotlight. Dims the page, cuts a hole
+     over the REAL target element, opens the relevant dropdown first so its
+     list is visible, and shows an arrowed popover with progress + buttons.
+     (This block is the final override of the tour window.* functions.)
+     ===================================================================== */
+  (function () {
+    const T = { steps: [], i: 0 };
+    const navItem = (k) => document.querySelector('#danah-topnav .tn-item[data-tnkey="' + k + '"]');
+    const ddItem = (gid, route) => document.querySelector('#' + gid + ' .di[data-route="' + route + '"]');
+    const q = (s) => document.querySelector(s);
+    function closeGroups() { document.querySelectorAll('#danah-topnav .tn-item.open').forEach((x) => x.classList.remove('open')); }
+    function spotEl() { let s = document.getElementById('danah-spot'); if (!s) { s = document.createElement('div'); s.id = 'danah-spot'; s.className = 'no-print'; document.body.appendChild(s); } return s; }
+    function popEl() { let p = document.getElementById('danah-tour'); if (!p) { p = document.createElement('div'); p.id = 'danah-tour'; p.className = 'no-print'; document.body.appendChild(p); } return p; }
+
+    function buildSteps() {
+      const L = (id) => (typeof navLocked === 'function') && navLocked(id);
+      const has = (gid) => !!document.getElementById(gid);
+      const ph = () => q('#content .page-head') || q('#content .page-title') || q('#content');
+      const firstItem = () => q('#content .lrow') || q('#content .item') || q('#content .card');
+      // page step is dropped when the role can't see that route
+      const P = (page, side, tgt, title, body) => (L(page) ? null : { page, side, target: tgt, fallback: ph, title, body });
+      const raw = [
+        { page: 'home', side: 'bottom', target: () => navItem('home'), title: 'Command Centre', body: 'Your daily overview — and the menu across the top is how you reach everything.' },
+        { page: 'home', side: 'bottom', target: () => q('#content .askbar'), title: 'Ask DANAH', body: 'Ask anything in plain language — grounded answers with citations, or an honest “I don’t know”.' },
+        { page: 'home', side: 'bottom', target: () => q('#content .run-card'), title: 'Live operations', body: 'Real figures from DANAH’s last pipeline run — sources checked, insights produced, confidence.' },
+        { page: 'home', side: 'top', target: () => q('#content .run-foot .btn-ghost'), fallback: () => q('#content .run-card'), title: 'Run the pipeline', body: 'Trigger a real run of the six agents whenever you need fresh intelligence.' },
+        has('tng-Intelligence') ? { openGroup: 'tng-Intelligence', side: 'right', target: () => q('#tng-Intelligence .tn-drop'), title: 'Intelligence menu', body: 'Everything DANAH sees and produces — let’s open a few of these.' } : null,
+        P('agents', 'bottom', ph, 'AI Agents', 'Run the six specialised agents and watch each step reason, with real tokens and cost.'),
+        P('knowledge', 'bottom', ph, 'Verified Knowledge', 'Upload documents. Once indexed, the Live Agent can cite them in its answers.'),
+        P('sources', 'top', () => q('#content [data-tour=sync]'), 'Sources', 'The connectors DANAH ingests from, with live health — sync one on demand (analyst+).'),
+        P('feed', 'bottom', firstItem, 'Intelligence Feed', 'Raw ingested items, each triaged by the Signal Agent — clearance-filtered.'),
+        has('tng-Decisions') ? { openGroup: 'tng-Decisions', side: 'right', target: () => q('#tng-Decisions .tn-drop'), title: 'Decisions menu', body: 'Turn insight into action.' } : null,
+        P('tasks', 'top', () => q('#content [data-tour=new-task]'), 'Action Tracker', 'Create actions and move them from To-do to Done — add one with “New action”.'),
+        P('approvals', 'top', () => q('#content [data-tour=approve]'), 'Approvals', 'Approve & publish — nothing DANAH produces goes out until you decide here, and every decision is audited.'),
+        P('memory', 'bottom', firstItem, 'Strategic Memory', 'What the agents remember, so the ministry never re-proposes what it already tried.'),
+        P('reports', 'bottom', firstItem, 'Reports & Briefings', 'Executive briefings, always bilingual — English and Arabic side by side.'),
+        has('tng-Administration') ? { openGroup: 'tng-Administration', side: 'left', target: () => q('#tng-Administration .tn-drop'), title: 'Administration menu', body: 'Manage accounts and read the audit log.' } : null,
+        P('users', 'top', () => q('#content [data-tour=new-user]'), 'User Management', 'Create accounts and set roles — clearance follows the role and is enforced on the server.'),
+        P('users', 'top', () => q('#content [data-tour=reset-pw]'), 'Reset a password', 'Reset any account’s password here; that user is signed out and must use the new one.'),
+        P('governance', 'bottom', ph, 'Governance & Audit', 'The tamper-evident, hash-chained log of every action in the system.'),
+        P('alerts', 'bottom', ph, 'Alerts', 'Notifications addressed to your role.'),
+        P('settings', 'bottom', ph, 'Settings', 'Switch light / dark, change language, and replay this tour any time.'),
+      ];
+      return raw.filter(Boolean);
+    }
+
+    function positionPop(p, r, side) {
+      const pw = p.offsetWidth, ph = p.offsetHeight, m = 15, vw = innerWidth, vh = innerHeight;
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      let s = side || 'bottom';
+      if (s === 'bottom' && r.bottom + m + ph > vh) s = 'top';
+      if (s === 'top' && r.top - m - ph < 0) s = 'bottom';
+      if (s === 'right' && r.right + m + pw > vw) s = 'left';
+      if (s === 'left' && r.left - m - pw < 0) s = 'bottom';
+      let top, left, aSide, aPos;
+      if (s === 'bottom') { top = r.bottom + m; left = cx - pw / 2; aSide = 'top'; }
+      else if (s === 'top') { top = r.top - m - ph; left = cx - pw / 2; aSide = 'bottom'; }
+      else if (s === 'right') { left = r.right + m; top = cy - ph / 2; aSide = 'left'; }
+      else { left = r.left - m - pw; top = cy - ph / 2; aSide = 'right'; }
+      left = Math.max(10, Math.min(vw - pw - 10, left));
+      top = Math.max(10, Math.min(vh - ph - 10, top));
+      p.style.top = top + 'px'; p.style.left = left + 'px';
+      const a = p.querySelector('.tt-arrow');
+      if (a) {
+        a.style.cssText = 'position:absolute;width:12px;height:12px;background:var(--surface);border:1px solid var(--line);transform:rotate(45deg)';
+        if (aSide === 'top') { a.style.top = '-7px'; a.style.left = (Math.min(Math.max(cx - left, 16), pw - 16) - 6) + 'px'; a.style.borderRight = 'none'; a.style.borderBottom = 'none'; }
+        else if (aSide === 'bottom') { a.style.bottom = '-7px'; a.style.left = (Math.min(Math.max(cx - left, 16), pw - 16) - 6) + 'px'; a.style.borderLeft = 'none'; a.style.borderTop = 'none'; }
+        else if (aSide === 'left') { a.style.left = '-7px'; a.style.top = (Math.min(Math.max(cy - top, 16), ph - 16) - 6) + 'px'; a.style.borderRight = 'none'; a.style.borderTop = 'none'; }
+        else { a.style.right = '-7px'; a.style.top = (Math.min(Math.max(cy - top, 16), ph - 16) - 6) + 'px'; a.style.borderLeft = 'none'; a.style.borderBottom = 'none'; }
+      }
+    }
+
+    function ensureOverlay() {
+      let o = document.getElementById('danah-tour-ov');
+      if (!o) {
+        o = document.createElement('div'); o.id = 'danah-tour-ov'; o.className = 'no-print';
+        // swallow every click/tap while the tour is running so the page can't be operated
+        ['click', 'mousedown', 'mouseup', 'touchstart'].forEach((ev) => o.addEventListener(ev, (e) => { e.stopPropagation(); e.preventDefault(); }, true));
+        document.body.appendChild(o);
+      }
+      return o;
+    }
+    // in-page targets can load asynchronously (a page fetch, then rows render) — poll, then fall back
+    function resolveTarget(step, cb) {
+      let tries = 0;
+      (function poll() {
+        const el = step.target ? step.target() : null;
+        if (el) { cb(el); return; }
+        if (tries++ > 18) { cb(step.fallback ? step.fallback() : null); return; }   // ≈ 1.4s
+        setTimeout(poll, 80);
+      })();
+    }
+    function paint(step, el) {
+      if (!step) { endTour(); return; }
+      const s = spotEl(), p = popEl(); ensureOverlay();
+      p.innerHTML = `<span class="tt-arrow"></span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--orange-2);text-transform:uppercase">Tour · ${T.i + 1}/${T.steps.length}</span><button onclick="danahTourEnd()" style="margin-left:auto;background:none;border:none;color:var(--ink-3);cursor:pointer;font-size:12px">Skip tour</button></div>
+        <div style="font-size:15.5px;font-weight:700;margin-bottom:5px">${esc(step.title)}</div>
+        <div style="font-size:13px;line-height:1.55;color:var(--ink-2)">${esc(step.body)}</div>
+        <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:14px">${T.i > 0 ? '<button class="btn btn-ghost btn-sm" onclick="danahTourNav(-1)">Back</button>' : ''}<button class="btn btn-primary btn-sm" onclick="danahTourNav(1)">${T.i === T.steps.length - 1 ? 'Done' : 'Next'}</button></div>`;
+      if (el) {
+        try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
+        setTimeout(function () {
+          const r = el.getBoundingClientRect(); const pad = 6;
+          s.style.top = (r.top - pad) + 'px'; s.style.left = (r.left - pad) + 'px';
+          s.style.width = (r.width + pad * 2) + 'px'; s.style.height = (r.height + pad * 2) + 'px';
+          s.classList.add('on');
+          positionPop(p, r, step.side);
+        }, 60);
+      } else {
+        s.classList.remove('on');
+        p.style.left = '50%'; p.style.top = 'auto'; p.style.bottom = '24px'; p.style.transform = 'translateX(-50%)';
+        const a = p.querySelector('.tt-arrow'); if (a) a.style.display = 'none';
+      }
+    }
+
+    function goStep() {
+      const step = T.steps[T.i]; if (!step) { endTour(); return; }
+      ensureOverlay();
+      if (step.page && typeof go === 'function' && (typeof S === 'undefined' || S.route !== step.page)) go(step.page);
+      // open/close dropdowns AFTER any navigation (go() rebuilds the nav)
+      setTimeout(function () {
+        closeGroups();
+        if (step.openGroup) { const gEl = document.getElementById(step.openGroup); if (gEl) gEl.classList.add('open'); }
+        resolveTarget(step, function (el) { paint(step, el); });
+      }, step.page ? 200 : 30);
+    }
+
+    function endTour() {
+      ['danah-spot', 'danah-tour', 'danah-tour-ov'].forEach(function (id) { const e = document.getElementById(id); if (e) e.remove(); });
+      closeGroups(); T.steps = [];
+    }
+    window.danahTourEnd = endTour;
+    window.danahTourNav = function (d) { T.i += d; if (T.i >= T.steps.length) { endTour(); return; } if (T.i < 0) T.i = 0; goStep(); };
+    window.danahMaybeTour = function () { if (!state.live) return; T.steps = buildSteps(); T.i = 0; if (!T.steps.length) return; setTimeout(goStep, 500); };
+    window.danahReplayTour = function () { window.danahMaybeTour(); };
+    let _rt; window.addEventListener('resize', function () { if (!document.getElementById('danah-tour') || !T.steps.length) return; clearTimeout(_rt); _rt = setTimeout(function () { const st = T.steps[T.i]; paint(st, st && st.target ? (st.target() || (st.fallback ? st.fallback() : null)) : null); }, 120); });
+  })();
 
   /* ---------- boot ----------------------------------------------------- */
   async function boot() {
